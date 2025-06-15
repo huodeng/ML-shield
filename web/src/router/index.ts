@@ -17,6 +17,15 @@ const router = createRouter({
       component: MainLayout,
       children: [
         {
+          path: '',
+          name: 'dashboard-home',
+          component: () => import('@/views/DashboardHome.vue'),
+          meta: {
+            title: 'Dashboard',
+            keepAlive: true
+          },
+        },
+        {
           path: 'model-analysis',
           name: 'model-analysis',
           component: () => import('@/views/ModelAnalysis.vue'),

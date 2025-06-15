@@ -27,6 +27,12 @@ const navigateHome = () => {
 
 const menuOptions = [
   {
+    label: 'Dashboard',
+    key: 'dashboard-home',
+    icon: renderIcon(HomeOutline),
+    path: '/dashboard',
+  },
+  {
     label: '数据集上传',
     key: 'dataset-upload',
     icon: renderIcon(CloudUploadOutline),
@@ -52,6 +58,10 @@ const currentMenuKey = computed(() => {
 
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
+}
+
+function openGuide() {
+  window.open('https://huodeng.github.io/shield-ml/', '_blank')
 }
 </script>
 
@@ -119,6 +129,16 @@ function renderIcon(icon: Component) {
           </div>
 
           <div class="header-right">
+            <n-button 
+              quaternary 
+              circle 
+              @click="openGuide"
+              class="guide-button"
+            >
+              <n-icon size="18">
+                <BookOutline />
+              </n-icon>
+            </n-button>
             <TaskQueue />
             <n-button quaternary circle @click="toggleTheme" class="theme-button">
               <n-icon size="18">
@@ -135,7 +155,11 @@ function renderIcon(icon: Component) {
         class="content"
         :class="{ 'dark': isDark }"
         :native-scrollbar="false"
-      >
+        >
+        
+
+
+
         <router-view />
       </n-layout-content>
     </n-layout>
@@ -276,9 +300,16 @@ function renderIcon(icon: Component) {
   }
 }
 
+.guide-button,
 .theme-button {
   transition: all 0.3s ease;
 
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.theme-button {
   &:hover {
     transform: rotate(30deg);
   }
