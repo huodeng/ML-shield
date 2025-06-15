@@ -45,10 +45,10 @@ ML-shield/
 ├── server/                 # 后端服务
 │   └── shield/
 │       ├── api.py          # API接口
-│       ├── tasks.py        # 任务处理
+│       ├── tasks.py        # 数据
 │       ├── BACKDOOR/       # 后门攻击模块
-│       ├── DLG/            # 深度泄露梯度
-│       ├── FILEF/          # 文件攻击
+│       ├── DLG/            # 深度梯度
+│       ├── FILEF/          # 文件
 │       └── MIA/            # 成员推理攻击
 └── docs/                   # 文档
     └── guide/              # 使用指南
