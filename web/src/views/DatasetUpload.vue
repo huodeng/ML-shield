@@ -144,7 +144,7 @@ const openDatasetInfo = (dataset) => {
 // 处理配置变更
 const handleConfigChange = async () => {
   try {
-    const response = await axios.post('http://localhost:5000/config', {
+    const response = await axios.post('/api/config', {
       imgsize: formData.value.imgsize,
       isuplord: formData.value.isuplord
     })
@@ -230,7 +230,7 @@ const uploadFile = async (file) => {
   formData.append('file', file)
 
   try {
-    const response = await axios.post('http://localhost:5000/upload_dataset', formData, {
+    const response = await axios.post('/api/upload_dataset', formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },

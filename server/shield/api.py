@@ -242,4 +242,4 @@ async def upload_dataset(file: UploadFile = File(...)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("api:app", host="0.0.0.0", port=5000, reload=True)
+    uvicorn.run("api:app", host="127.0.0.1", port=8080, reload=True)

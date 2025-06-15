@@ -119,8 +119,15 @@ onUnmounted(() => {
 defineExpose({
   addLog
 })
+
+
 </script>
 
+<script lang="ts">
+export default{
+  name:'TrainingLog',
+}
+</script>
 <template>
   <n-card
     title="训练日志"
@@ -208,7 +215,7 @@ defineExpose({
           终端
         </n-button>
         <n-input
-          v-model:value="searchQuery"
+          v-model="searchQuery"
           placeholder="搜索日志..."
           size="small"
         />
@@ -227,7 +234,7 @@ defineExpose({
         >
           <span class="log-time">[{{ log.timestamp }}]</span>
           <n-tag
-            :type="getLogTagType(log.level) as 'info' | 'warning' | 'error' | 'success' | 'default' | 'primary'"
+            :type="getLogTagType(log.level)"
             size="small"
             class="log-level"
           >

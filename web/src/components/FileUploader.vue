@@ -109,6 +109,14 @@ const handleUpload = async (options: UploadCustomRequestOptions) => {
     options.onError();
   }
 };
+
+
+</script>
+
+<script lang="ts">
+export default{
+  name:'FileUploader',
+}
 </script>
 
 <style scoped>

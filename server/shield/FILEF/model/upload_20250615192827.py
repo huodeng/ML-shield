@@ -1,9 +1,9 @@
-# ¶¨ÒåÍøÂçÄ£ĞÍ
+# å®šä¹‰ç½‘ç»œæ¨¡å‹
 import torch.nn as nn
 import torch.nn.functional as F
-class model(nn.Module):
+class M(nn.Module):
     def __init__(self):
-        super(model, self).__init__()
+        super(M, self).__init__()
         self.conv1 = nn.Conv2d(1, 6, (5, 5), (1, 1), 2)
         self.conv2 = nn.Conv2d(6, 16, (5, 5))
         self.fc1 = nn.Linear(16 * 5 * 5, 120)
@@ -21,6 +21,6 @@ class model(nn.Module):
         x = F.relu(x)
         x = self.fc2(x)
         x = F.relu(x)
-        x = self.fc3(x) # ¼ÆËã·ÖÀàºóÃ¿¸öÊı×ÖµÄ¸ÅÂÊÖµ
+        x = self.fc3(x) # è®¡ç®—åˆ†ç±»åæ¯ä¸ªæ•°å­—çš„æ¦‚ç‡å€¼
         return F.log_softmax(x, dim=1)
 

@@ -19,7 +19,7 @@ class MLShield:
         self.dataset = None
         self.scaler = None
         self.isuplord = isuplord
-        self.params = params
+        self.params = None  # 初始化为None，稍后可以设置
     def init_model(self) -> None:
         print("Debug - Initializing model...")
         self.net = model()
@@ -48,10 +48,12 @@ class MLShield:
             print("Debug - Skipping data loading (isuplord=False)")
             return True
 
-    def run_mia_attack(self, params, use_privacy: bool = False) -> Dict[str, Any]:
+    def run_mia_attack(self, use_privacy: bool = False, params=None) -> Dict[str, Any]:
         """运行成员推理攻击"""
         try:
-            result = miad(self.net, self.isuplord, self.dataset, self.imgsize, self.params) if use_privacy else mia(self.net, self.isuplord, self.dataset, self.imgsize)
+            # 使用传入的params或者实例的params
+            attack_params = params if params is not None else self.params
+            result = miad(self.net, self.isuplord, self.dataset, self.imgsize, attack_params) if use_privacy else mia(self.net, self.isuplord, self.dataset, self.imgsize)
             if isinstance(result, dict):
                 # 确保所有值都是可序列化的
                 return {k: float(v) if isinstance(v, (int, float)) else str(v) for k, v in result.items()}
@@ -59,48 +61,60 @@ class MLShield:
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
-    def run_dlg_attack(self, params,use_privacy: bool = False) -> Dict[str, Any]:
+    def run_dlg_attack(self, use_privacy: bool = False, params=None) -> Dict[str, Any]:
         """运行深度泄漏梯度攻击"""
         try:
-            result = dlgd(self.net, self.isuplord, self.dataset, self.imgsize,self.params) if use_privacy else dlg(self.net, self.isuplord, self.dataset, self.imgsize)
+            # 使用传入的params或者实例的params
+            attack_params = params if params is not None else self.params
+            result = dlgd(self.net, self.isuplord, self.dataset, self.imgsize, attack_params) if use_privacy else dlg(self.net, self.isuplord, self.dataset, self.imgsize)
             if isinstance(result, dict):
-             return result
+                return result
+            return {"status": "error", "message": "Invalid result format"}
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
-    def run_backdoor_attack(self, params,use_privacy: bool = False) -> Dict[str, Any]:
+    def run_backdoor_attack(self, use_privacy: bool = False, params=None) -> Dict[str, Any]:
         """运行后门攻击"""
         try:
+            # 使用传入的params或者实例的params
+            attack_params = params if params is not None else self.params
             if not self.isuplord:
-                result = backdoord(self.net, self.isuplord, self.dataset,self.params) if use_privacy else backdoor(self.net, self.isuplord, self.dataset)
+                result = backdoord(self.net, self.isuplord, self.dataset, attack_params) if use_privacy else backdoor(self.net, self.isuplord, self.dataset)
             else:
-                result = custombackdoord(self.net, self.dataset, self.imgsize,self.params) if use_privacy else custombackdoor(self.net, self.dataset, self.imgsize)
+                result = custombackdoord(self.net, self.dataset, self.imgsize, attack_params) if use_privacy else custombackdoor(self.net, self.dataset, self.imgsize)
             if isinstance(result, dict):
-             return result
+                return result
+            return {"status": "error", "message": "Invalid result format"}
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
-    def run_all_attacks(self, use_privacy: bool = False) -> Dict[str, Any]:
+    def run_all_attacks(self, use_privacy: bool = False, params=None) -> Dict[str, Any]:
         """运行所有攻击方法"""
         results = {
-            'mia': self.run_mia_attack(use_privacy),
-            'dlg': self.run_dlg_attack(use_privacy),
-            'backdoor': self.run_backdoor_attack(use_privacy)
+            'mia': self.run_mia_attack(use_privacy, params),
+            'dlg': self.run_dlg_attack(use_privacy, params),
+            'backdoor': self.run_backdoor_attack(use_privacy, params)
         }
         return results
 
 if __name__ == '__main__':
     # 使用示例
-    
     shield = MLShield(imgsize=32, isuplord=False)
     shield.init_model()
     shield.load_data()
-    params=find_optimal_parameters()
     
-    # 或者单独运行某个攻击（使用隐私保护）
-    shield.run_mia_attack(use_privacy=False,params=params)
-    # shield.run_dlg_attack(use_privacy=True)
-    # shield.run_backdoor_attack(use_privacy=True)
+    # 获取最优参数
+    params = find_optimal_parameters()
+    shield.params = params  # 设置参数
+    
+    # 运行所有攻击
+    results = shield.run_all_attacks(use_privacy=False)
+    print(results)
+    
+    # 或者单独运行某个攻击
+    # mia_result = shield.run_mia_attack(use_privacy=False)
+    # dlg_result = shield.run_dlg_attack(use_privacy=True)
+    # backdoor_result = shield.run_backdoor_attack(use_privacy=True)
 
 
 

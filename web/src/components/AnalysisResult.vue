@@ -40,11 +40,17 @@ const analysisResult = inject<AnalysisResultType | null>('analysisResult', null)
 const realResult = inject<realResultType | null>('realResult', null)
 </script>
 
+<script lang="ts">
+export default {
+  name: 'AnalysisResult'
+}
+</script>
+
 <template>
  <div class="result-container" v-if="analysisResult || realResult" :class="{ 'dark': isDark }">
     <n-space vertical size="large">
       <n-card title="分析结果详情" class="details-card">
-        <n-collapse v-model:expanded-names="activeNames">
+        <n-collapse v-model="activeNames">
           <n-collapse-item title="详细结果" name="realResult" v-if="realResult?.message">
             <n-descriptions bordered :column="1">
               <n-descriptions-item label="消息" class="message-item" v-if="realResult.status">

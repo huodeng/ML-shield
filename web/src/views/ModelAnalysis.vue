@@ -22,10 +22,10 @@ import {
   NDescriptionsItem,
 } from 'naive-ui'
 import { WarningOutline, AnalyticsOutline, AlertCircleOutline, ShieldCheckmarkOutline } from '@vicons/ionicons5'
-import AnalysisResult from '@/components/AnalysisResult.vue'
+import AnalysisResult from '../components/AnalysisResult.vue'
 import { useStorage } from '@vueuse/core'
-import FileUploader from '@/components/FileUploader.vue'
-import TrainingLog from '@/components/TrainingLog.vue'
+import FileUploader from '../components/FileUploader.vue'
+import TrainingLog from '../components/TrainingLog.vue'
 
 const cachedComponents = ref<string[]>(['FileUploader'])
 
@@ -255,7 +255,7 @@ onBeforeUnmount(() => {
       <n-card title="分析配置" class="config-card">
         <n-space vertical>
           <n-select
-            v-model:value="analysisType"
+            v-model="analysisType"
             :options="analysisOptions"
             placeholder="选择分析类型"
             @update:value="handleAnalysisTypeChange"
@@ -267,17 +267,8 @@ onBeforeUnmount(() => {
 
           <n-collapse-transition :show="showAdvancedConfig">
             <div class="advanced-config">
-              <n-form-item label="攻击强度">
-                <n-slider
-                  v-model:value="advancedConfig.attackStrength"
-                  :step="0.1"
-                  :min="0"
-                  :max="1"
-                />
-              </n-form-item>
-
               <n-form-item label="启用隐私保护">
-                <n-switch v-model:value="advancedConfig.usePrivacy" />
+                <n-switch v-model="advancedConfig.usePrivacy" />
               </n-form-item>
             </div>
           </n-collapse-transition>

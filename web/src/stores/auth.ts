@@ -26,7 +26,7 @@ export const useAuthStore = defineStore('auth', {
 
     async login(username: string, password: string) {
       try {
-        const response = await fetch('http://localhost:5000/api/auth', {
+        const response = await fetch('/api/auth', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -48,7 +48,7 @@ export const useAuthStore = defineStore('auth', {
 
     async createApiKey() {
       try {
-        const response = await fetch('http://localhost:5000/api/keys', {
+        const response = await fetch('/api/keys', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${this.token}`
