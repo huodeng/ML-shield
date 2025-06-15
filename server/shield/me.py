@@ -108,11 +108,14 @@ if __name__ == '__main__':
     shield.params = params  # 设置参数
     
     # 运行所有攻击
-    results = shield.run_all_attacks(use_privacy=False)
-    print(results)
+    #results = shield.run_all_attacks(use_privacy=False)
+    #print(results)
+   
     
     # 或者单独运行某个攻击
-    # mia_result = shield.run_mia_attack(use_privacy=False)
+    mia_result = shield.run_mia_attack(use_privacy=False)
+    print("MIA Attack Results:", mia_result)
+
     # dlg_result = shield.run_dlg_attack(use_privacy=True)
     # backdoor_result = shield.run_backdoor_attack(use_privacy=True)
 

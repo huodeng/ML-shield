@@ -316,7 +316,7 @@ onBeforeUnmount(() => {
         </n-space>
       </n-card>
 
-      
+<!--       
       <n-card title="分析进度" v-if="analyzing">
         <n-space vertical>
           <n-progress
@@ -327,7 +327,7 @@ onBeforeUnmount(() => {
           />
           <div class="progress-text">分析进度：{{ analysisProgress }}%</div>
         </n-space>
-      </n-card>
+      </n-card> -->
 
       <TrainingLog ref="trainingLogRef" />
       

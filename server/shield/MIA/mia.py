@@ -18,8 +18,6 @@ import sys
 class WebSocketPrinter:
     def __init__(self, ws_url):
         self.ws_url = ws_url
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
         
     async def _send_message(self, message):
         try:
@@ -30,7 +28,19 @@ class WebSocketPrinter:
             
     def print(self, *args, **kwargs):
         message = " ".join(str(arg) for arg in args)
-        self.loop.run_until_complete(self._send_message(message))
+        try:
+            # Check if there's already a running event loop
+            loop = asyncio.get_running_loop()
+            # If we're in an async context, create a task
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(asyncio.run, self._send_message(message))
+                future.result(timeout=5)
+        except RuntimeError:
+            # No running loop, safe to use asyncio.run
+            asyncio.run(self._send_message(message))
+        except Exception as e:
+            print(f"Failed to send message: {e}", file=sys.stderr)
         
 ws_printer = WebSocketPrinter("ws://localhost:5000")
 

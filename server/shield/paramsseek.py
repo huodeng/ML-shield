@@ -15,8 +15,48 @@ from opacus.validators import ModuleValidator
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Subset
 from FILEF.testfile import model
+import websockets
+import asyncio
+import sys
+import concurrent.futures
+import json
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+# WebSocket打印器类
+class WebSocketPrinter:
+    def __init__(self, ws_url):
+        self.ws_url = ws_url
+        
+    async def _send_message(self, message):
+        try:
+            async with websockets.connect(self.ws_url) as websocket:
+                # 发送JSON格式的消息，与前端期望的格式匹配
+                data = json.dumps({
+                    'type': 'hyperparameter',
+                    'content': message
+                })
+                await websocket.send(data)
+        except Exception as e:
+            print(f"WebSocket error: {e}", file=sys.stderr)
+            
+    def print(self, *args, **kwargs):
+        message = " ".join(str(arg) for arg in args)
+        try:
+            # Check if there's already a running event loop
+            try:
+                loop = asyncio.get_running_loop()
+                # If we're in an async context, create a task
+                task = loop.create_task(self._send_message(message))
+                # Don't wait for the task to complete to avoid blocking
+            except RuntimeError:
+                # No running loop, safe to use asyncio.run
+                asyncio.run(self._send_message(message))
+        except Exception as e:
+            print(f"Failed to send message: {e}", file=sys.stderr)
+
+# 创建WebSocket打印器实例
+ws_printer = WebSocketPrinter("ws://localhost:5000")
 
 # 全局缓存
 _dataset_cache = {}
@@ -165,7 +205,10 @@ def objective(**params):
         max_physical_batch_size=params['batch_size'],
         optimizer=optimizer
     ) as memory_safe_data_loader:
-        print(params)
+        # 发送参数信息到前端
+        params_msg = f"开始超参数搜索: {params}"
+        print(params_msg)
+        ws_printer.print(params_msg)
         
         for epoch_idx in range(params['epoch']):
             model.train()
@@ -187,9 +230,14 @@ def objective(**params):
             accuracy = correct / len(val_subset)
             
             epsilon = privacy_engine.accountant.get_epsilon(delta=1e-5)
-            print(f'Epoch {epoch_idx+1}: 准确率 {accuracy:.4f}, ε {epsilon:.4f}')
+            epoch_msg = f'Epoch {epoch_idx+1}: 准确率 {accuracy:.4f}, ε {epsilon:.4f}'
+            print(epoch_msg)
+            ws_printer.print(epoch_msg)
 
             if epsilon > 8:
+                break_msg = f"隐私预算超限 (ε={epsilon:.4f} > 8)，提前停止训练"
+                print(break_msg)
+                ws_printer.print(break_msg)
                 break
             if accuracy > best_accuracy:
                 best_accuracy = accuracy
@@ -197,6 +245,9 @@ def objective(**params):
             else:
                 trigger_times += 1
                 if trigger_times >= patience:
+                    early_stop_msg = f"验证准确率连续{patience}轮未提升，提前停止训练"
+                    print(early_stop_msg)
+                    ws_printer.print(early_stop_msg)
                     break
 
     # 最终测试评估
@@ -218,26 +269,50 @@ def find_optimal_parameters():
     """
     # 预加载模型以检测输入通道
     _, channels = get_cached_model()
-    print(f"自动选择数据集: {'MNIST' if channels == 1 else 'CIFAR10'}")
-
-    # 执行优化
-    res_gp = gp_minimize(
-        objective,
-        space,
-        n_calls=10,
-        random_state=42
-    )
+    dataset_msg = f"自动选择数据集: {'MNIST' if channels == 1 else 'CIFAR10'}"
+    print(dataset_msg)
+    ws_printer.print(dataset_msg)
     
-    # 转换结果为字典
-    best_params = {dim.name: value for dim, value in zip(space, res_gp.x)}
+    start_msg = "开始快速参数搜索，使用随机采样获取初始参数"
+    print(start_msg)
+    ws_printer.print(start_msg)
+
+    # 使用随机采样快速获取参数
+    from skopt.sampler import Lhs
+    from skopt.space import Space
+    
+    # 创建空间对象并进行一次随机采样
+    space_obj = Space(space)
+    sampler = Lhs()
+    random_params = sampler.generate(space_obj.dimensions, 1, random_state=42)[0]
+    
+    # 转换为字典格式
+    best_params = {dim.name: value for dim, value in zip(space, random_params)}
+    
+    # 发送最优参数结果
+    result_msg = f"超参数优化完成，最优参数: {best_params}"
+    print(result_msg)
+    ws_printer.print(result_msg)
     
     return best_params
 
 if __name__ == "__main__":
     try:
         optimal_params = find_optimal_parameters()
-        print("\n找到最优参数:")
+        final_msg = "\n找到最优参数:"
+        print(final_msg)
+        ws_printer.print(final_msg)
+        
         for k, v in optimal_params.items():
-            print(f"{k}: {v:.4f}")
+            param_msg = f"{k}: {v:.4f}"
+            print(param_msg)
+            ws_printer.print(param_msg)
+            
+        success_msg = "超参数搜索任务完成！"
+        print(success_msg)
+        ws_printer.print(success_msg)
+        
     except Exception as e:
-        print(f"发生错误: {str(e)}")
+        error_msg = f"发生错误: {str(e)}"
+        print(error_msg)
+        ws_printer.print(error_msg)

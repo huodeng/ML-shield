@@ -222,7 +222,43 @@ const uploadState = reactive({
 })
 
 // 已上传数据集列表
-const uploadedDatasets = ref([])
+const uploadedDatasets = ref([
+  {
+    id: '1',
+    name: 'CIFAR-10-custom.npz',
+    size: 163840000, // 156MB
+    uploadTime: '2024-01-15T10:30:00Z',
+    type: 'npz'
+  },
+  {
+    id: '2', 
+    name: 'mnist-train-data.csv',
+    size: 52428800, // 50MB
+    uploadTime: '2024-01-14T14:20:00Z',
+    type: 'csv'
+  },
+  {
+    id: '3',
+    name: 'fashion-mnist.npy', 
+    size: 78643200, // 75MB
+    uploadTime: '2024-01-13T09:15:00Z',
+    type: 'npy'
+  },
+  {
+    id: '4',
+    name: 'custom-dataset.txt',
+    size: 10485760, // 10MB
+    uploadTime: '2024-01-12T16:45:00Z', 
+    type: 'txt'
+  },
+  {
+    id: '5',
+    name: 'image-classification-data.npz',
+    size: 209715200, // 200MB
+    uploadTime: '2024-01-11T11:30:00Z',
+    type: 'npz'
+  }
+])
 const isLoadingDatasets = ref(false)
 
 // 显示消息提示

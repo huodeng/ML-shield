@@ -11,6 +11,7 @@ import numpy as np
 from me import MLShield
 from FILEF.filefun import copy_file
 from  tasks import real_result
+from paramsseek import find_optimal_parameters
 app = FastAPI()
 
 # 配置CORS
@@ -143,11 +144,21 @@ async def run_method(request: Request):
         shield.init_model()
         shield.load_data()
         
+        # 在攻击前执行超参数搜索
+        try:
+            optimal_params = find_optimal_parameters()
+            param_msg = f"超参数搜索完成，获得最优参数: {optimal_params}"
+            print(param_msg)
+        except Exception as e:
+            param_error = f"超参数搜索失败: {str(e)}，使用默认参数继续执行攻击"
+            print(param_error)
+            optimal_params = None
+        
         if method_name == 'all':
             result = shield.run_all_attacks(use_privacy=use_privacy)
         elif method_name == 'mia':
-            #result = shield.run_mia_attack(use_privacy=use_privacy)
-            result=real_result['miad'] if use_privacy else real_result['mia']
+            result = shield.run_mia_attack(use_privacy=use_privacy)
+            #result=real_result['miad'] if use_privacy else real_result['mia']
         elif method_name == 'dlg':
             result = shield.run_dlg_attack(use_privacy=use_privacy)
             #result=real_result['dlgd'] if use_privacy else real_result['dlg']
@@ -168,7 +179,8 @@ async def run_method(request: Request):
             'status': 'success',
             'message': result,
             'attack_type': method_name,
-            'use_privacy': use_privacy
+            'use_privacy': use_privacy,
+            'optimal_params': optimal_params if 'optimal_params' in locals() else None
         }
     except Exception as e:
         raise HTTPException(

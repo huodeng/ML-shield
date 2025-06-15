@@ -70,6 +70,7 @@ logs/
 
 # Data files
 data/
+temp_data/
 *.csv
 *.json
 *.npy

@@ -35,10 +35,28 @@ const connect = () => {
 
   ws.value.onmessage = (event) => {
     try {
+
       const data = JSON.parse(event.data)
-      addLog(data.message, data.type || 'info')
+
+      
+      // 检查是否是嵌套的JSON消息（如hyperparameter消息）
+      if (data.type === 'terminal' && data.content) {
+        try {
+          const innerData = JSON.parse(data.content)
+
+          // 使用内层消息的type和content
+          addLog(innerData.content || innerData.message, innerData.type || 'info')
+          return
+        } catch (innerError) {
+        }
+      }
+      
+      // 普通消息处理
+      addLog(data.content || data.message, data.type || 'info')
     } catch (error) {
-      addLog(event.data, 'terminal')
+      console.error('JSON parse error:', error)
+      console.error('Raw data that failed to parse:', event.data)
+      addLog(`JSON解析错误: ${event.data}`, 'error')
     }
   }
 }
@@ -50,7 +68,7 @@ const disconnect = () => {
 }
 
 // 添加日志
-const addLog = (message: any, level: 'info' | 'warning' | 'error' | 'success' | 'system' | 'terminal' = 'info') => {
+const addLog = (message: any, level: 'info' | 'warning' | 'error' | 'success' | 'system' | 'terminal' | 'hyperparameter' = 'info') => {
   logs.value.push({
     message,
     level,
@@ -88,7 +106,8 @@ const getLogTagType = (level: string) => {
     error: 'error',
     success: 'success',
     system: 'default',
-    terminal: 'primary'
+    terminal: 'primary',
+    hyperparameter: 'warning'
   }
   return types[level as keyof typeof types] || 'default'
 }
@@ -213,6 +232,13 @@ export default{
           @click="messageFilter = 'terminal'"
         >
           终端
+        </n-button>
+        <n-button
+          :type="messageFilter === 'hyperparameter' ? 'primary' : 'default'"
+          size="small"
+          @click="messageFilter = 'hyperparameter'"
+        >
+          超参数
         </n-button>
         <n-input
           v-model="searchQuery"
