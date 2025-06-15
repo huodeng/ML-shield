@@ -1,0 +1,13 @@
+fastapi==0.115.11
+matplotlib==3.9.2
+numpy==1.26.4
+opacus==1.5.3
+pandas==2.2.3
+pillow==10.2.0
+scikit-image==0.25.2
+scikit-learn==1.6.0
+torchvision==0.17.0
+torchviz==0.0.3
+tqdm==4.66.5
+uvicorn==0.34.0
+

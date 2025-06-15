@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+
+# Distribution / packaging
+dist/
+build/
+
+# Local development settings
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Logs
+logs/
+*.log
+
+# Database
+*.sqlite3
+*.db
+
+# Model files
+*.h5
+*.pkl
+*.pt
+*.pth
+*.onnx
+
+# Data files
+data/
+*.csv
+*.json
+*.npy
+*.npz
+
+# OS specific
+.DS_Store
+Thumbs.db
