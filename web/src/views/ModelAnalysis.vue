@@ -26,6 +26,7 @@ import AnalysisResult from '../components/AnalysisResult.vue'
 import { useStorage } from '@vueuse/core'
 import FileUploader from '../components/FileUploader.vue'
 import TrainingLog from '../components/TrainingLog.vue'
+import { useTaskQueueStore } from '@/stores/taskQueue'
 
 const cachedComponents = ref<string[]>(['FileUploader'])
 
@@ -64,6 +65,7 @@ interface ModelFile {
 }
 
 const message = useMessage()
+const taskQueue = useTaskQueueStore()
 const analysisType = useStorage('analysis-type', null)
 const showAdvancedConfig = useStorage('show-advanced-config', false)
 const advancedConfig = useStorage('advanced-config', {
@@ -78,6 +80,7 @@ const analysisResult = ref<AnalysisResultType | null>(null)
 const modelFiles = ref<ModelFile[]>([])
 const analysisProgress = ref(0)
 let progressInterval: ReturnType<typeof setInterval> | null = null
+let currentTaskId = ref<string | null>(null)
 const realResult = ref<realResultType>({
   acc: '',
   status: '',
@@ -151,6 +154,20 @@ const startAnalysis = async () => {
     }
   }
 
+  // 获取分析类型的中文名称
+  const analysisOption = analysisOptions.find(option => option.value === analysisType.value)
+  const taskName = analysisOption ? analysisOption.label : '模型分析'
+  
+  // 添加任务到队列
+  const taskId = taskQueue.addTask({
+    name: taskName,
+    type: taskName
+  })
+  currentTaskId.value = taskId
+  
+  // 启动任务
+  taskQueue.startTask(taskId)
+
   let progressInterval: ReturnType<typeof setInterval> | null = null
 
   try {
@@ -161,6 +178,8 @@ const startAnalysis = async () => {
     progressInterval = setInterval(() => {
       if (analysisProgress.value < 90) {
         analysisProgress.value += 10
+        // 同步更新任务进度
+        taskQueue.updateProgress(taskId, analysisProgress.value)
       }
     }, 1000)
 
@@ -184,21 +203,33 @@ const startAnalysis = async () => {
       progressInterval = null
     }
     analysisProgress.value = 100
+    taskQueue.updateProgress(taskId, 100)
+    
     const result = await response.json()
     
     console.log('分析结果:', result)
     analysisResult.value = result
     realResult.value = result
     showResult.value = true
+    
+    // 完成任务
+    taskQueue.completeTask(taskId, result, message)
+    
   } catch (error) {
     if (progressInterval) {
       clearInterval(progressInterval)
       progressInterval = null
     }
-    message.error(`分析失败: 请先设置配置信息`)
+    
+    const errorMessage = '请先设置配置信息'
+    message.error(`分析失败: ${errorMessage}`)
+    
+    // 标记任务失败
+    taskQueue.errorTask(taskId, errorMessage, message)
 
   } finally {
     analyzing.value = false
+    currentTaskId.value = null
   }
 }
 onBeforeUnmount(() => {
@@ -255,7 +286,7 @@ onBeforeUnmount(() => {
       <n-card title="分析配置" class="config-card">
         <n-space vertical>
           <n-select
-            v-model="analysisType"
+            v-model:value="analysisType"
             :options="analysisOptions"
             placeholder="选择分析类型"
             @update:value="handleAnalysisTypeChange"
@@ -268,7 +299,7 @@ onBeforeUnmount(() => {
           <n-collapse-transition :show="showAdvancedConfig">
             <div class="advanced-config">
               <n-form-item label="启用隐私保护">
-                <n-switch v-model="advancedConfig.usePrivacy" />
+                <n-switch v-model:value="advancedConfig.usePrivacy" />
               </n-form-item>
             </div>
           </n-collapse-transition>

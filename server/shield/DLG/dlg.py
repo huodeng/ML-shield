@@ -21,19 +21,12 @@ import os
 class WebSocketPrinter:
     def __init__(self, ws_url):
         self.ws_url = ws_url
-        self.loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.loop)
+        # 移除事件循环创建和设置，避免与现有事件循环冲突
         
-    async def _send_message(self, message):
-        try:
-            async with websockets.connect(self.ws_url) as websocket:
-                await websocket.send(message)
-        except Exception as e:
-            print(f"WebSocket error: {e}", file=sys.stderr)
-            
     def print(self, *args, **kwargs):
+        # 简单地使用print函数输出信息，不再尝试发送到WebSocket
         message = " ".join(str(arg) for arg in args)
-        self.loop.run_until_complete(self._send_message(message))
+        print(message)
         
 ws_printer = WebSocketPrinter("ws://localhost:5000")
 def dlg(net,isuplord,dataset,imgsize):

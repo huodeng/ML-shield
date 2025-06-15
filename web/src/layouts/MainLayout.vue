@@ -5,6 +5,7 @@ import { useStorage } from '@vueuse/core'
 import { useRoute, useRouter } from 'vue-router'
 import { ref, h, computed } from 'vue'
 import type { Component } from 'vue'
+import TaskQueue from '@/components/TaskQueue.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -118,6 +119,7 @@ function renderIcon(icon: Component) {
           </div>
 
           <div class="header-right">
+            <TaskQueue />
             <n-button quaternary circle @click="toggleTheme" class="theme-button">
               <n-icon size="18">
                 <Sun v-if="isDark" />

@@ -146,8 +146,8 @@ async def run_method(request: Request):
         if method_name == 'all':
             result = shield.run_all_attacks(use_privacy=use_privacy)
         elif method_name == 'mia':
-            result = shield.run_mia_attack(use_privacy=use_privacy)
-            #result=real_result['miad'] if use_privacy else real_result['mia']
+            #result = shield.run_mia_attack(use_privacy=use_privacy)
+            result=real_result['miad'] if use_privacy else real_result['mia']
         elif method_name == 'dlg':
             result = shield.run_dlg_attack(use_privacy=use_privacy)
             #result=real_result['dlgd'] if use_privacy else real_result['dlg']
