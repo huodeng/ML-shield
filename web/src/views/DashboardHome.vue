@@ -29,7 +29,9 @@ import {
   ArrowForwardOutline,
   BulbOutline,
   TrendingUpOutline,
-  SecurityOutline
+  SecurityOutline,
+  SearchOutline,
+  SettingsOutline
 } from '@vicons/ionicons5'
 import { useRouter } from 'vue-router'
 import { useTaskQueueStore } from '@/stores/taskQueue'
@@ -62,6 +64,14 @@ const features = [
     description: '对机器学习模型进行全面的安全性分析，检测潜在的隐私泄露风险',
     icon: AnalyticsOutline,
     color: '#2080f0',
+    path: '/dashboard/model-analysis',
+    status: 'ready'
+  },
+  {
+    title: '超参数搜索',
+    description: '智能搜索最优攻击参数，自动调优攻击强度和迭代次数，提升分析精度',
+    icon: SearchOutline,
+    color: '#722ed1',
     path: '/dashboard/model-analysis',
     status: 'ready'
   },
@@ -231,7 +241,7 @@ const getActivityIcon = (type: string) => {
     <!-- 功能卡片区域 -->
     <div class="features-section" :class="{ 'animate-in': showFeatures }">
       <h2 class="section-title">核心功能</h2>
-      <n-grid :cols="2" :x-gap="20" :y-gap="20">
+      <n-grid :cols="3" :x-gap="20" :y-gap="20">
         <n-grid-item v-for="feature in features" :key="feature.title">
           <n-card 
             class="feature-card" 
@@ -421,10 +431,6 @@ const getActivityIcon = (type: string) => {
   margin-bottom: 32px;
   
   .welcome-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border: none;
-    
     :deep(.n-card__content) {
       padding: 32px;
     }
@@ -448,7 +454,6 @@ const getActivityIcon = (type: string) => {
     font-size: 2.2rem;
     font-weight: 700;
     margin: 0 0 8px 0;
-    color: white;
   }
   
   .welcome-subtitle {
@@ -459,20 +464,10 @@ const getActivityIcon = (type: string) => {
   
   .welcome-tip {
     max-width: 400px;
-    
-    :deep(.n-alert) {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: white;
-    }
   }
   
   .welcome-stats {
     flex: 1;
-    
-    :deep(.n-statistic .n-statistic__label) {
-      color: rgba(255, 255, 255, 0.8);
-    }
   }
 }
 

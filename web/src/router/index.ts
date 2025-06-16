@@ -35,6 +35,15 @@ const router = createRouter({
           },
         },
         {
+          path: 'model-analysis/result',
+          name: 'analysis-result-detail',
+          component: () => import('@/views/AnalysisResultDetail.vue'),
+          meta: {
+            title: '分析结果详情',
+            keepAlive: false
+          },
+        },
+        {
           path:'dataset-upload',
           name:'dataset-upload',
           component: () => import('@/views/DatasetUpload.vue'),

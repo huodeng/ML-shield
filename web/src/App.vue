@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterView, useRoute } from 'vue-router'
-import { NConfigProvider, NMessageProvider, darkTheme, lightTheme } from 'naive-ui'
+import { NConfigProvider, NMessageProvider, NDialogProvider, darkTheme, lightTheme } from 'naive-ui'
 import { useStorage } from '@vueuse/core'
 
 // 主题状态管理
@@ -39,16 +39,18 @@ const customLightTheme = {
 <template>
   <n-config-provider :theme="isDark ? customDarkTheme : customLightTheme">
     <n-message-provider>
-      <div class="app-container" :class="{ 'dark-mode': isDark }">
-        <router-view v-slot="{ Component }">
-          <transition name="fade" mode="out-in">
-            <component
-              :is="Component"
-              :key="route.fullPath"
-            />
-          </transition>
-        </router-view>
-      </div>
+      <n-dialog-provider>
+        <div class="app-container" :class="{ 'dark-mode': isDark }">
+          <router-view v-slot="{ Component }">
+            <transition name="fade" mode="out-in">
+              <component
+                :is="Component"
+                :key="route.fullPath"
+              />
+            </transition>
+          </router-view>
+        </div>
+      </n-dialog-provider>
     </n-message-provider>
   </n-config-provider>
 </template>

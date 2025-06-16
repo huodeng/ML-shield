@@ -22,6 +22,7 @@ import {
   AnalyticsOutline,
   DocumentTextOutline
 } from '@vicons/ionicons5'
+import { useRouter } from 'vue-router'
 import type { Task } from '@/stores/taskQueue'
 
 interface Props {
@@ -36,6 +37,7 @@ interface Emits {
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+const router = useRouter()
 
 const showModal = computed({
   get: () => props.show,
@@ -111,17 +113,35 @@ const formatTime = (date: Date) => {
 }
 
 const viewDetails = () => {
+  // 将任务结果保存到本地存储
+  const task = currentTask.value
+  if (task?.result) {
+    localStorage.setItem('analysisResult', JSON.stringify(task.result))
+  }
+  
+  // 跳转到结果详情页面
+  router.push('/dashboard/model-analysis/result')
+  
+  // 触发事件并关闭模态框
   emit('view-details')
   showModal.value = false
 }
 
-const hasAnalysisResult = computed(() => {
-  return props.task?.result && 
-         props.task.status === 'completed' && 
-         (props.task.result.score !== undefined || 
-          props.task.result.categories || 
-          props.task.result.vulnerabilities)
+// 直接使用传入的任务数据
+const currentTask = computed(() => {
+  return props.task
 })
+
+const hasAnalysisResult = computed(() => {
+  const task = currentTask.value
+  return task?.result && 
+         task.status === 'completed' && 
+         (task.result.attack_type || 
+          task.result.message || 
+          task.result.acc !== undefined)
+})
+
+
 </script>
 
 <template>
@@ -133,7 +153,9 @@ const hasAnalysisResult = computed(() => {
     :style="{ maxWidth: '600px' }"
     :segmented="true"
   >
-    <div v-if="task" class="task-result-content">
+
+
+    <div v-if="currentTask" class="task-result-content">
       <!-- 基本信息 -->
       <n-descriptions 
         label-placement="left" 
@@ -142,56 +164,43 @@ const hasAnalysisResult = computed(() => {
         class="task-descriptions"
       >
         <n-descriptions-item label="任务名称">
-          {{ task.name }}
+          {{ currentTask.name }}
         </n-descriptions-item>
         
         <n-descriptions-item label="任务类型">
-          {{ task.type }}
+          {{ currentTask.type }}
         </n-descriptions-item>
         
         <n-descriptions-item label="状态">
-          <n-tag :type="getStatusColor(task.status)">
+          <n-tag :type="getStatusColor(currentTask.status)">
             <template #icon>
               <n-icon>
-                <component :is="getStatusIcon(task.status)" />
+                <component :is="getStatusIcon(currentTask.status)" />
               </n-icon>
             </template>
-            {{ getStatusText(task.status) }}
+            {{ getStatusText(currentTask.status) }}
           </n-tag>
         </n-descriptions-item>
         
         <n-descriptions-item label="开始时间">
-          {{ formatTime(task.startTime) }}
+          {{ formatTime(currentTask.startTime) }}
         </n-descriptions-item>
         
-        <n-descriptions-item v-if="task.endTime" label="结束时间">
-          {{ formatTime(task.endTime) }}
+        <n-descriptions-item v-if="currentTask.endTime" label="结束时间">
+          {{ formatTime(currentTask.endTime) }}
         </n-descriptions-item>
         
         <n-descriptions-item label="执行时长">
-          {{ formatDuration(task.startTime, task.endTime) }}
+          {{ formatDuration(currentTask.startTime, currentTask.endTime) }}
         </n-descriptions-item>
         
-        <n-descriptions-item v-if="task.status === 'running' || task.status === 'pending'" label="进度">
+        <n-descriptions-item v-if="currentTask.status === 'running' || currentTask.status === 'pending'" label="进度">
           <n-progress 
-            :percentage="task.progress" 
-            :status="task.status === 'running' ? 'default' : 'info'"
+            :percentage="currentTask.progress" 
+            :status="currentTask.status === 'running' ? 'default' : 'info'"
           />
         </n-descriptions-item>
       </n-descriptions>
-
-      <!-- 错误信息 -->
-      <div v-if="task.error" class="error-section">
-        <n-divider title-placement="left">
-          <n-icon>
-            <CloseCircleOutline />
-          </n-icon>
-          错误信息
-        </n-divider>
-        <div class="error-content">
-          {{ task.error }}
-        </div>
-      </div>
 
       <!-- 分析结果摘要 -->
       <div v-if="hasAnalysisResult" class="result-section">
@@ -202,56 +211,44 @@ const hasAnalysisResult = computed(() => {
           分析结果摘要
         </n-divider>
         
-        <n-descriptions label-placement="left" :column="2" bordered>
-          <n-descriptions-item v-if="task.result.score !== undefined" label="安全评分">
-            <n-tag 
-              :type="task.result.score >= 80 ? 'success' : task.result.score >= 60 ? 'warning' : 'error'"
-              size="large"
-            >
-              {{ task.result.score }}分
-            </n-tag>
+        <n-descriptions label-placement="left" :column="1" bordered>
+          <n-descriptions-item label="攻击类型" v-if="currentTask.result.attack_type">
+            {{ currentTask.result.attack_type }}
           </n-descriptions-item>
           
-          <n-descriptions-item v-if="task.result.acc" label="准确率">
-            {{ task.result.acc }}
+          <n-descriptions-item label="总体准确率" v-if="currentTask.result.acc">
+            {{ currentTask.result.acc }}
           </n-descriptions-item>
           
-          <n-descriptions-item v-if="task.result.attack_type" label="攻击类型">
-            {{ task.result.attack_type }}
+          <n-descriptions-item label="隐私保护" v-if="currentTask.result.use_privacy !== undefined">
+            {{ currentTask.result.use_privacy ? '已启用' : '未启用' }}
           </n-descriptions-item>
           
-          <n-descriptions-item v-if="task.result.use_privacy !== undefined" label="隐私保护">
-            <n-tag :type="task.result.use_privacy ? 'success' : 'default'">
-              {{ task.result.use_privacy ? '已启用' : '未启用' }}
-            </n-tag>
-          </n-descriptions-item>
+          <!-- 根据不同攻击类型显示特定指标 -->
+          <template v-if="currentTask.result.attack_type === 'backdoor' && currentTask.result.message">
+            <n-descriptions-item label="干净准确率" v-if="currentTask.result.message.clean_acc">
+              {{ (currentTask.result.message.clean_acc * 100).toFixed(2) }}%
+            </n-descriptions-item>
+            <n-descriptions-item label="攻击成功率" v-if="currentTask.result.message.asr">
+              {{ (currentTask.result.message.asr * 100).toFixed(2) }}%
+            </n-descriptions-item>
+          </template>
+          
+          <template v-else-if="currentTask.result.attack_type === 'mia' && currentTask.result.message">
+            <n-descriptions-item label="训练集准确率" v-if="currentTask.result.message.clf1">
+              {{ (currentTask.result.message.clf1 * 100).toFixed(2) }}%
+            </n-descriptions-item>
+            <n-descriptions-item label="测试集准确率" v-if="currentTask.result.message.clf2">
+              {{ (currentTask.result.message.clf2 * 100).toFixed(2) }}%
+            </n-descriptions-item>
+          </template>
         </n-descriptions>
-
-        <!-- 漏洞列表 -->
-        <div v-if="task.result.vulnerabilities && task.result.vulnerabilities.length > 0" class="vulnerabilities-section">
-          <h4>发现的漏洞</h4>
-          <n-list>
-            <n-list-item v-for="(vuln, index) in task.result.vulnerabilities" :key="index">
-              <div class="vulnerability-item">
-                <n-tag 
-                  :type="vuln.severity === 'high' ? 'error' : vuln.severity === 'medium' ? 'warning' : 'default'"
-                  size="small"
-                >
-                  {{ vuln.severity === 'high' ? '高危' : vuln.severity === 'medium' ? '中危' : '低危' }}
-                </n-tag>
-                <span class="vulnerability-type">{{ vuln.type }}</span>
-                <p class="vulnerability-description">{{ vuln.description }}</p>
-              </div>
-            </n-list-item>
-          </n-list>
-        </div>
       </div>
 
       <!-- 操作按钮 -->
       <div class="action-section">
         <n-space justify="end">
           <n-button 
-            v-if="task.status === 'completed' && hasAnalysisResult"
             type="primary"
             @click="viewDetails"
           >
@@ -260,7 +257,7 @@ const hasAnalysisResult = computed(() => {
                 <DocumentTextOutline />
               </n-icon>
             </template>
-            查看完整报告
+            查看详情
           </n-button>
           
           <n-button @click="showModal = false">
@@ -269,8 +266,6 @@ const hasAnalysisResult = computed(() => {
         </n-space>
       </div>
     </div>
-    
-    <n-empty v-else description="无任务信息" />
   </n-modal>
 </template>
 

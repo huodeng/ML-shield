@@ -2,9 +2,22 @@
 import { NCard, NSpace, NProgress, NTag, NList, NListItem, NButton, NIcon, NCollapse, NCollapseItem, NDescriptions, NDescriptionsItem, NDivider, NImage } from 'naive-ui'
 import { h, ref,inject } from 'vue'
 import { useStorage } from '@vueuse/core'
+import { useRouter } from 'vue-router'
+import { EyeOutline } from '@vicons/ionicons5'
 
 const isDark = useStorage('theme-mode', false)
 const activeNames = ref(['realResult'])
+const router = useRouter()
+
+// 查看详情方法
+const viewDetails = () => {
+  if (realResult?.value) {
+    // 将结果保存到本地存储
+    localStorage.setItem('latestAnalysisResult', JSON.stringify(realResult.value))
+    // 跳转到详情页面
+    router.push('/dashboard/model-analysis/result')
+  }
+}
 
 interface AnalysisResultType {
   score: number
@@ -50,6 +63,14 @@ export default {
  <div class="result-container" v-if="analysisResult || realResult" :class="{ 'dark': isDark }">
     <n-space vertical size="large">
       <n-card title="分析结果详情" class="details-card">
+        <template #header-extra>
+          <n-button type="primary" @click="viewDetails" v-if="realResult?.message">
+            <template #icon>
+              <n-icon><EyeOutline /></n-icon>
+            </template>
+            查看详情
+          </n-button>
+        </template>
         <n-collapse v-model="activeNames">
           <n-collapse-item title="详细结果" name="realResult" v-if="realResult?.message">
             <n-descriptions bordered :column="1">

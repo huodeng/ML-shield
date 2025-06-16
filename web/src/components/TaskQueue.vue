@@ -92,9 +92,19 @@ const viewTaskResult = (task: Task) => {
   showResultModal.value = true
 }
 
-const viewTaskDetails = () => {
-  // 跳转到模型分析页面查看完整结果
-  router.push('/dashboard/model-analysis')
+const viewTaskDetails = (task: Task) => {
+  // 检查任务是否存在
+  if (!task) {
+    console.error('Task is undefined')
+    return
+  }
+  
+  // 保存任务结果到本地存储，供结果页面使用
+  if (task.result) {
+    localStorage.setItem('latestAnalysisResult', JSON.stringify(task.result))
+  }
+  // 跳转到结果页面查看完整结果
+  router.push('/dashboard/model-analysis/result')
   showResultModal.value = false
   showPopover.value = false
 }
@@ -248,7 +258,7 @@ const clearCompleted = () => {
   <TaskResultModal 
     v-model:show="showResultModal"
     :task="selectedTask"
-    @view-details="viewTaskDetails"
+    @view-details="() => viewTaskDetails(selectedTask)"
   />
 </template>
 

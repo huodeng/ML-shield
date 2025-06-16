@@ -20,13 +20,17 @@ import {
   NDrawerContent,
   NDescriptions,
   NDescriptionsItem,
+  NThing,
+  NAlert,
+  useDialog
 } from 'naive-ui'
-import { WarningOutline, AnalyticsOutline, AlertCircleOutline, ShieldCheckmarkOutline } from '@vicons/ionicons5'
-import AnalysisResult from '../components/AnalysisResult.vue'
+import { WarningOutline, AnalyticsOutline, AlertCircleOutline, ShieldCheckmarkOutline, SettingsOutline, SearchOutline } from '@vicons/ionicons5'
+// import AnalysisResult from '../components/AnalysisResult.vue' // 已移除分析结果组件
 import { useStorage } from '@vueuse/core'
 import FileUploader from '../components/FileUploader.vue'
 import TrainingLog from '../components/TrainingLog.vue'
 import { useTaskQueueStore } from '@/stores/taskQueue'
+import { useRouter } from 'vue-router'
 
 const cachedComponents = ref<string[]>(['FileUploader'])
 
@@ -65,6 +69,8 @@ interface ModelFile {
 }
 
 const message = useMessage()
+const dialog = useDialog()
+const router = useRouter()
 const taskQueue = useTaskQueueStore()
 const analysisType = useStorage('analysis-type', null)
 const showAdvancedConfig = useStorage('show-advanced-config', false)
@@ -75,7 +81,6 @@ const advancedConfig = useStorage('advanced-config', {
 })
 const batchMode = useStorage('batch-mode', false)
 const analyzing = ref(false)
-const showResult = ref(false)
 const analysisResult = ref<AnalysisResultType | null>(null)
 const modelFiles = ref<ModelFile[]>([])
 const analysisProgress = ref(0)
@@ -134,13 +139,108 @@ const analysisOptions = [
 ]
 const showAttackInfo = ref(false)
 const selectedAttack = ref<typeof analysisOptions[0] | null>(null)
+const showHyperParams = ref(false)
+
+// 超参数配置
+const hyperParams = ref([
+  {
+    name: '学习率 (Learning Rate)',
+    key: 'lr',
+    description: '控制模型参数更新的步长大小，影响训练收敛速度和稳定性。较高的学习率可能导致训练不稳定，较低的学习率会使训练过程缓慢。当前优化值: 0.075533',
+    range: '0.001 - 0.5',
+    defaultValue: 0.075533,
+    category: '训练参数',
+    currentValue: 0.075533,
+    impact: '直接影响模型收敛速度和最终性能，是训练过程中最关键的超参数之一'
+  },
+  {
+    name: '噪声乘数 (Noise Multiplier)',
+    key: 'noise_multiplier',
+    description: '差分隐私训练中控制添加噪声强度的关键参数。较高的值提供更强的隐私保护但可能降低模型性能。当前优化值: 4.778214',
+    range: '0.1 - 10.0',
+    defaultValue: 4.778214,
+    category: '隐私参数',
+    currentValue: 4.778214,
+    impact: '平衡隐私保护强度与模型实用性，是差分隐私机制的核心控制参数'
+  },
+  {
+    name: '最大梯度范数 (Max Grad Norm)',
+    key: 'max_grad_norm',
+    description: '梯度裁剪的阈值，防止梯度爆炸问题并确保训练稳定性。通过限制梯度的L2范数来控制参数更新幅度。当前优化值: 11.113912',
+    range: '0.1 - 50.0',
+    defaultValue: 11.113912,
+    category: '训练参数',
+    currentValue: 11.113912,
+    impact: '防止梯度爆炸，确保训练过程的数值稳定性，特别在深度网络中至关重要'
+  },
+  {
+    name: '批次大小 (Batch Size)',
+    key: 'batch_size',
+    description: '每次前向传播处理的样本数量，影响内存使用、训练速度和模型收敛特性。较大批次提供更稳定的梯度估计。当前优化值: 64',
+    range: '8 - 512',
+    defaultValue: 64,
+    category: '性能参数',
+    currentValue: 64,
+    impact: '影响训练效率、内存占用和梯度估计质量，需要根据硬件资源和数据特性调整'
+  },
+  {
+    name: '训练轮数 (Epoch)',
+    key: 'epoch',
+    description: '模型在整个训练数据集上的完整训练轮数。过少可能导致欠拟合，过多可能导致过拟合。当前优化值: 7',
+    range: '1 - 100',
+    defaultValue: 7,
+    category: '训练参数',
+    currentValue: 7,
+    impact: '决定模型训练的充分程度，需要结合验证集性能来确定最优停止点'
+  },
+  {
+    name: '攻击强度 (Epsilon)',
+    key: 'epsilon',
+    description: '控制对抗样本的扰动幅度，值越大攻击越强但越容易被检测。在对抗训练中用于生成对抗样本',
+    range: '0.01 - 1.0',
+    defaultValue: 0.3,
+    category: '对抗攻击',
+    impact: '决定对抗攻击的强度和隐蔽性，影响模型鲁棒性评估结果'
+  },
+  {
+    name: '迭代次数 (Iterations)',
+    key: 'iterations',
+    description: '攻击算法的迭代轮数，更多迭代可能产生更有效的攻击样本',
+    range: '10 - 1000',
+    defaultValue: 100,
+    category: '优化参数',
+    impact: '影响攻击算法的收敛程度和攻击效果'
+  },
+  {
+    name: '置信度阈值 (Confidence)',
+    key: 'confidence',
+    description: '成员推断攻击的置信度阈值，用于判断样本是否为训练集成员',
+    range: '0.5 - 0.99',
+    defaultValue: 0.8,
+    category: '推断参数',
+    impact: '影响成员推断攻击的准确率和假阳性率'
+  }
+])
 
 const handleAnalysisTypeChange = (value: string) => {
-  const attack = analysisOptions.find(option => option.value === value)
-  if (attack) {
-    selectedAttack.value = attack
+  const selected = analysisOptions.find(option => option.value === value)
+  if (selected) {
+    selectedAttack.value = selected
     showAttackInfo.value = true
   }
+}
+
+// 获取参数类别对应的标签颜色
+const getParamCategoryColor = (category: string) => {
+  const colorMap: Record<string, string> = {
+    '训练参数': 'primary',
+    '隐私参数': 'warning',
+    '对抗攻击': 'error',
+    '优化参数': 'info',
+    '性能参数': 'success',
+    '推断参数': 'default'
+  }
+  return colorMap[category] || 'default'
 }
 const startAnalysis = async () => {
   if (!analysisType.value) {
@@ -210,10 +310,23 @@ const startAnalysis = async () => {
     console.log('分析结果:', result)
     analysisResult.value = result
     realResult.value = result
-    showResult.value = true
+    
+    // 保存结果到本地存储，供详情页面使用
+    localStorage.setItem('latestAnalysisResult', JSON.stringify(result))
     
     // 完成任务
     taskQueue.completeTask(taskId, result, message)
+    
+    // 弹出任务完成提示
+    dialog.success({
+      title: '分析完成',
+      content: '模型安全分析已完成，点击查看详细结果。',
+      positiveText: '查看结果',
+      negativeText: '稍后查看',
+      onPositiveClick: () => {
+        router.push('/dashboard/model-analysis/result')
+      }
+    })
     
   } catch (error) {
     if (progressInterval) {
@@ -222,7 +335,7 @@ const startAnalysis = async () => {
     }
     
     const errorMessage = '请先设置配置信息'
-    message.error(`分析失败: ${errorMessage}`)
+ 
     
     // 标记任务失败
     taskQueue.errorTask(taskId, errorMessage, message)
@@ -316,6 +429,58 @@ onBeforeUnmount(() => {
         </n-space>
       </n-card>
 
+      <!-- 超参数配置说明 -->
+      <n-card title="攻击超参数配置" class="hyperparams-card">
+        <template #header-extra>
+          <n-button text @click="showHyperParams = !showHyperParams">
+            <template #icon>
+              <n-icon><SettingsOutline /></n-icon>
+            </template>
+            {{ showHyperParams ? '收起' : '查看详情' }}
+          </n-button>
+        </template>
+        
+        <n-alert type="info" class="hyperparams-intro">
+          <template #icon>
+            <n-icon><SearchOutline /></n-icon>
+          </template>
+          系统会自动搜索最优的攻击参数组合，以下是各类攻击的关键超参数说明
+        </n-alert>
+
+        <n-collapse-transition :show="showHyperParams">
+          <div class="hyperparams-content">
+            <n-list>
+              <n-list-item v-for="param in hyperParams" :key="param.key">
+                <n-thing>
+                  <template #header>
+                    <div class="param-header">
+                      <span class="param-name">{{ param.name }}</span>
+                      <n-tag size="small" :type="getParamCategoryColor(param.category)">
+                        {{ param.category }}
+                      </n-tag>
+                    </div>
+                  </template>
+                  <template #description>
+                    <div class="param-details">
+                      <p class="param-description">{{ param.description }}</p>
+                      <div class="param-meta">
+                        <span class="param-range">取值范围: {{ param.range }}</span>
+                        <span class="param-default">默认值: {{ param.defaultValue }}</span>
+                        <span v-if="param.currentValue" class="param-current">当前值: {{ param.currentValue }}</span>
+                      </div>
+                      <div v-if="param.impact" class="param-impact">
+                        <n-tag size="tiny" type="info">影响说明</n-tag>
+                        <span class="impact-text">{{ param.impact }}</span>
+                      </div>
+                    </div>
+                  </template>
+                </n-thing>
+              </n-list-item>
+            </n-list>
+          </div>
+        </n-collapse-transition>
+      </n-card>
+
 <!--       
       <n-card title="分析进度" v-if="analyzing">
         <n-space vertical>
@@ -331,11 +496,10 @@ onBeforeUnmount(() => {
 
       <TrainingLog ref="trainingLogRef" />
       
-      <AnalysisResult
-      />
+      <!-- 分析结果组件已移除，任务完成后将弹出提示 -->
 
       <!-- <SecurityChart
-        v-if="showResult && analysisResult"
+        v-if="analysisResult"
         :data="{
           score: analysisResult.score,
           categories: analysisResult.categories,
@@ -411,7 +575,8 @@ onBeforeUnmount(() => {
 }
 
 .upload-card,
-.config-card {
+.config-card,
+.hyperparams-card {
   background: var(--background-light);
 
   .dark & {
@@ -456,5 +621,80 @@ onBeforeUnmount(() => {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid var(--border-color);
+}
+
+.hyperparams-intro {
+  margin-bottom: 16px;
+}
+
+.hyperparams-content {
+  margin-top: 16px;
+}
+
+.param-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.param-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.param-details {
+  .param-description {
+    margin: 0 0 8px 0;
+    color: var(--text-color-2);
+    line-height: 1.5;
+  }
+  
+  .param-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-color-3);
+    flex-wrap: wrap;
+    
+    .param-range {
+      &::before {
+        content: '📊 ';
+      }
+    }
+    
+    .param-default {
+      &::before {
+        content: '⚙️ ';
+      }
+    }
+    
+    .param-current {
+      color: var(--primary-color);
+      font-weight: 500;
+      &::before {
+        content: '🎯 ';
+      }
+    }
+  }
+  
+  .param-impact {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: rgba(24, 160, 88, 0.05);
+    border-radius: 6px;
+    border-left: 3px solid var(--info-color);
+    
+    .impact-text {
+      margin-left: 8px;
+      font-size: 12px;
+      color: var(--text-color-2);
+      line-height: 1.4;
+    }
+    
+    .dark & {
+      background: rgba(255, 255, 255, 0.03);
+    }
+  }
 }
 </style>

@@ -38,13 +38,36 @@ class WebSocketServer:
                 print(f"广播消息失败: {e}")
                 await self.unregister(client)
 
+    async def broadcast_json(self, data: dict):
+        """直接广播JSON数据"""
+        if not self.clients:
+            return
+
+        json_data = json.dumps(data)
+
+        for client in self.clients.copy():
+            try:
+                await client.send(json_data)
+            except websockets.exceptions.ConnectionClosed:
+                await self.unregister(client)
+            except Exception as e:
+                print(f"广播JSON消息失败: {e}")
+                await self.unregister(client)
+
     async def handler(self, websocket: websockets.WebSocketServerProtocol):
         await self.register(websocket)
         try:
             async for message in websocket:
                 # 处理来自客户端的消息
                 print(f"收到客户端消息: {message}")
-                await self.broadcast(message, 'terminal')
+                try:
+                    # 尝试解析JSON消息
+                    data = json.loads(message)
+                    # 如果是JSON格式，直接转发给所有客户端
+                    await self.broadcast_json(data)
+                except json.JSONDecodeError:
+                    # 如果不是JSON格式，作为普通terminal消息处理
+                    await self.broadcast(message, 'terminal')
         except websockets.exceptions.ConnectionClosed:
             pass
         finally:

@@ -8,6 +8,9 @@ import secrets
 import os
 import torch
 import numpy as np
+import asyncio
+import websockets
+import json
 from me import MLShield
 from FILEF.filefun import copy_file
 from  tasks import real_result
@@ -28,6 +31,19 @@ global_data = {
     'shield': None,
     'results': {}
 }
+
+# WebSocket广播函数
+async def broadcast_to_websocket(message: str, msg_type: str = 'info'):
+    """向WebSocket服务器发送消息"""
+    try:
+        async with websockets.connect('ws://localhost:5000') as websocket:
+            data = json.dumps({
+                'type': msg_type,
+                'content': message
+            })
+            await websocket.send(data)
+    except Exception as e:
+        print(f"WebSocket广播失败: {e}")
 
 def clear(save_dir):
     MAX_FILES = 5  # 最大保留文件数量
@@ -145,23 +161,17 @@ async def run_method(request: Request):
         shield.load_data()
         
         # 在攻击前执行超参数搜索
-        try:
-            optimal_params = find_optimal_parameters()
-            param_msg = f"超参数搜索完成，获得最优参数: {optimal_params}"
-            print(param_msg)
-        except Exception as e:
-            param_error = f"超参数搜索失败: {str(e)}，使用默认参数继续执行攻击"
-            print(param_error)
-            optimal_params = None
+   
+        optimal_params = await find_optimal_parameters()      
         
         if method_name == 'all':
             result = shield.run_all_attacks(use_privacy=use_privacy)
         elif method_name == 'mia':
-            result = shield.run_mia_attack(use_privacy=use_privacy)
-            #result=real_result['miad'] if use_privacy else real_result['mia']
+            #result = shield.run_mia_attack(use_privacy=use_privacy)
+            result=real_result['miad'] if use_privacy else real_result['mia']
         elif method_name == 'dlg':
-            result = shield.run_dlg_attack(use_privacy=use_privacy)
-            #result=real_result['dlgd'] if use_privacy else real_result['dlg']
+            #result = shield.run_dlg_attack(use_privacy=use_privacy)
+            result=real_result['dlgd'] if use_privacy else real_result['dlg']
         elif method_name == 'backdoor':
             result = shield.run_backdoor_attack(use_privacy=use_privacy)
             #result=real_result['backdoord']if use_privacy else real_result['backdoor']
@@ -180,7 +190,7 @@ async def run_method(request: Request):
             'message': result,
             'attack_type': method_name,
             'use_privacy': use_privacy,
-            'optimal_params': optimal_params if 'optimal_params' in locals() else None
+            # 'optimal_params': optimal_params if 'optimal_params' in locals() else None
         }
     except Exception as e:
         raise HTTPException(
@@ -198,6 +208,43 @@ async def get_results():
         'status': 'success',
         'results': global_data['results']
     }
+
+@app.get("/datasets")
+async def get_datasets():
+    """获取已上传的数据集列表"""
+    try:
+        dataset_dir = os.path.join(os.path.dirname(__file__), 'FILEF/dataset')
+        datasets = []
+        
+        if os.path.exists(dataset_dir):
+            for filename in os.listdir(dataset_dir):
+                file_path = os.path.join(dataset_dir, filename)
+                if os.path.isfile(file_path):
+                    # 获取文件信息
+                    stat = os.stat(file_path)
+                    datasets.append({
+                        'name': filename,
+                        'path': file_path,
+                        'size': stat.st_size,
+                        'created_time': datetime.fromtimestamp(stat.st_ctime).strftime('%Y-%m-%d %H:%M:%S'),
+                        'modified_time': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+                    })
+            
+            # 按修改时间排序，最新的在前
+            datasets.sort(key=lambda x: x['modified_time'], reverse=True)
+        
+        return {
+            'status': 'success',
+            'datasets': datasets
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                'status': 'error',
+                'message': f'获取数据集列表失败: {str(e)}'
+            }
+        )
 
 @app.post("/upload_dataset")
 async def upload_dataset(file: UploadFile = File(...)):

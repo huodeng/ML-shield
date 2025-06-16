@@ -31,7 +31,8 @@ class WebSocketPrinter:
     async def _send_message(self, message):
         try:
             async with websockets.connect(self.ws_url) as websocket:
-                # 发送JSON格式的消息，与前端期望的格式匹配
+                # 发送JSON格式的消息给WebSocket服务器
+                # 服务器会将此消息广播给所有连接的客户端
                 data = json.dumps({
                     'type': 'hyperparameter',
                     'content': message
@@ -261,7 +262,7 @@ def objective(**params):
 
     return - (0.8 * final_acc - 0.2 * epsilon / 10)
 
-def find_optimal_parameters():
+async def find_optimal_parameters():
     """
     自动选择数据集并执行贝叶斯优化
     Returns:
@@ -271,11 +272,11 @@ def find_optimal_parameters():
     _, channels = get_cached_model()
     dataset_msg = f"自动选择数据集: {'MNIST' if channels == 1 else 'CIFAR10'}"
     print(dataset_msg)
-    ws_printer.print(dataset_msg)
+    await ws_printer._send_message(dataset_msg)
     
     start_msg = "开始快速参数搜索，使用随机采样获取初始参数"
     print(start_msg)
-    ws_printer.print(start_msg)
+    await ws_printer._send_message(start_msg)
 
     # 使用随机采样快速获取参数
     from skopt.sampler import Lhs
@@ -290,29 +291,45 @@ def find_optimal_parameters():
     best_params = {dim.name: value for dim, value in zip(space, random_params)}
     
     # 发送最优参数结果
-    result_msg = f"超参数优化完成，最优参数: {best_params}"
+    result_msg = "超参数优化完成，找到最优参数配置:"
     print(result_msg)
-    ws_printer.print(result_msg)
+    await ws_printer._send_message(result_msg)
+    
+    # 逐个参数进行详细描述
+    for param_name, param_value in best_params.items():
+        if isinstance(param_value, float):
+            param_detail = f"  • {param_name}: {param_value:.6f}"
+        else:
+            param_detail = f"  • {param_name}: {param_value}"
+        print(param_detail)
+        await ws_printer._send_message(param_detail)
+    
+    summary_msg = f"本次超参数搜索共找到 {len(best_params)} 个最优参数，已应用到模型训练中。"
+    print(summary_msg)
+    await ws_printer._send_message(summary_msg)
     
     return best_params
 
-if __name__ == "__main__":
+async def main():
     try:
-        optimal_params = find_optimal_parameters()
+        optimal_params = await find_optimal_parameters()
         final_msg = "\n找到最优参数:"
         print(final_msg)
-        ws_printer.print(final_msg)
+        await ws_printer._send_message(final_msg)
         
         for k, v in optimal_params.items():
             param_msg = f"{k}: {v:.4f}"
             print(param_msg)
-            ws_printer.print(param_msg)
+            await ws_printer._send_message(param_msg)
             
         success_msg = "超参数搜索任务完成！"
         print(success_msg)
-        ws_printer.print(success_msg)
+        await ws_printer._send_message(success_msg)
         
     except Exception as e:
         error_msg = f"发生错误: {str(e)}"
         print(error_msg)
-        ws_printer.print(error_msg)
+        await ws_printer._send_message(error_msg)
+
+if __name__ == "__main__":
+    asyncio.run(main())

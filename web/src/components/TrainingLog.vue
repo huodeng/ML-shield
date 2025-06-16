@@ -38,11 +38,11 @@ const connect = () => {
 
       const data = JSON.parse(event.data)
 
-      
       // 检查是否是嵌套的JSON消息（如hyperparameter消息）
       if (data.type === 'terminal' && data.content) {
         try {
           const innerData = JSON.parse(data.content)
+
 
           // 使用内层消息的type和content
           addLog(innerData.content || innerData.message, innerData.type || 'info')
