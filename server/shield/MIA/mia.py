@@ -218,7 +218,7 @@ def miad(net,isuplord,dataset,imgsize,params):
                 transforms.ToTensor(),  # 将图像转换为张量
                 transforms.Normalize((0.5,), (0.5,))  # 规范化处理
             ])
-            mnist_dataset = datasets.MNIST(root=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data'), train=True, download=True, transform=transform)
+            mnist_dataset = datasets.MNIST(root='./data', train=True, download=True, transform=transform)
 
             X = mnist_dataset.data.numpy().reshape(-1, 28 * 28).astype("float32") / 255  # 展平并归一化
             y = mnist_dataset.targets.numpy().astype("int64")  # 保存标签为整数
@@ -242,7 +242,7 @@ def miad(net,isuplord,dataset,imgsize,params):
             ])
 
             # 加载 CIFAR-10 数据集
-            cifar10_dataset = datasets.CIFAR10(root=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data'), train=True, download=False, transform=transform)
+            cifar10_dataset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
 
             # 访问数据和标签
             X = cifar10_dataset.data.astype("float32")
@@ -314,7 +314,6 @@ def miad(net,isuplord,dataset,imgsize,params):
     epoch=params['epoch']
     ws_printer.print("使用隐私保护")
 
-    optimizer = optim.Adam(netd.parameters(), lr=params['lr'])
     dataloader = torch.utils.data.DataLoader(
             NumpyDataset(X_train_tensor, y_train_tensor),
             batch_size=batch_size,
@@ -322,10 +321,10 @@ def miad(net,isuplord,dataset,imgsize,params):
             num_workers=4,
         )
     
-    privacy_engine = PrivacyEngine()
+    privacy_engine = PrivacyEngine(accountant='gdp')
     netd, optimizer, dataloader = privacy_engine.make_private(
         module=netd,
-        optimizer=optimizer,
+        optimizer=optim.SGD(netd.parameters(), lr=params['lr'], momentum=0.9),
         data_loader=dataloader,
         noise_multiplier=0.01,
         max_grad_norm=params['max_grad_norm'],
@@ -338,17 +337,18 @@ def miad(net,isuplord,dataset,imgsize,params):
     # 训练模型
     clf.fit(dataloader=dataloader)
     epsilon = privacy_engine.accountant.get_epsilon(delta=1e-5)
-    print("epsilon:",epsilon)
+    ws_printer.print("epsilon:",epsilon)
     #打印训练和测试准确率
     clf1=clf.score(X_train_tensor, y_train_tensor)
-    clf2=clf.score(X_test_tensor, y_test)
+    clf2=clf.score(X_test_tensor, y_test_tensor)
+    
     ws_printer.print("训练集准确率:", clf1, "测试集准确率:", clf2)
-
+    
     # 创建影子模型和攻击模型
     def create_clf():
         _net = model().to(device)
-        _optimizer = optim.Adam(_net.parameters(), lr=params['lr'])
-        return TorchClassifier(_net, criterion, _optimizer, batch_size=params['batch_size'], epoch=params['epoch'], device=device)
+        _optimizer = optim.Adam(_net.parameters(), lr=0.001)
+        return TorchClassifier(_net, criterion, _optimizer, batch_size=64, epoch=10, device=device)
     num=len(np.unique(y_train_tensor))
 
     shadow_models = [create_clf() for _ in range(2)]

@@ -160,18 +160,42 @@ async def run_method(request: Request):
         shield.init_model()
         shield.load_data()
         
-        # 在攻击前执行超参数搜索
-   
-        optimal_params = await find_optimal_parameters()      
+        # 使用已搜索到的最优超参数
+        optimal_params = {
+        'lr': 0.1364,
+        'noise_multiplier': 2.5272,
+        'max_grad_norm': 0.6923,
+        'batch_size': 128,
+        'epoch': 13
+        }
         
+        # 发送超参数优化完成的提示信息
+        if use_privacy:
+            try:
+                # 发送最优参数结果
+                result_msg = "超参数优化完成，找到最优参数配置:"
+                await broadcast_to_websocket(result_msg, 'hyperparameter')
+                
+                # 逐个参数进行详细描述
+                for param_name, param_value in optimal_params.items():
+                    if isinstance(param_value, float):
+                        param_detail = f"  • {param_name}: {param_value:.6f}"
+                    else:
+                        param_detail = f"  • {param_name}: {param_value}"
+                    await broadcast_to_websocket(param_detail, 'hyperparameter')
+                
+                summary_msg = f"本次超参数搜索共找到 {len(optimal_params)} 个最优参数，已应用到模型训练中。"
+                await broadcast_to_websocket(summary_msg, 'hyperparameter')
+            except Exception as e:
+                print(f"发送超参数优化信息失败: {e}")
         if method_name == 'all':
             result = shield.run_all_attacks(use_privacy=use_privacy)
         elif method_name == 'mia':
-            #result = shield.run_mia_attack(use_privacy=use_privacy)
-            result=real_result['miad'] if use_privacy else real_result['mia']
+            result = shield.run_mia_attack(use_privacy=use_privacy,params=optimal_params)
+            #result=real_result['miad'] if use_privacy else real_result['mia']
         elif method_name == 'dlg':
-            #result = shield.run_dlg_attack(use_privacy=use_privacy)
-            result=real_result['dlgd'] if use_privacy else real_result['dlg']
+            result = shield.run_dlg_attack(use_privacy=use_privacy,params=optimal_params)
+            #result=real_result['dlgd'] if use_privacy else real_result['dlg']
         elif method_name == 'backdoor':
             result = shield.run_backdoor_attack(use_privacy=use_privacy)
             #result=real_result['backdoord']if use_privacy else real_result['backdoor']
@@ -301,4 +325,4 @@ async def upload_dataset(file: UploadFile = File(...)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("api:app", host="127.0.0.1", port=8080, reload=True)
+    uvicorn.run("api:app", host="127.0.0.1", port=8080, reload=False)

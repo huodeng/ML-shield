@@ -10,4 +10,7 @@ torchvision==0.17.0
 torchviz==0.0.3
 tqdm==4.66.5
 uvicorn==0.34.0
+pywebview==5.3.1
+pyinstaller==6.11.1
+requests==2.32.3
 
