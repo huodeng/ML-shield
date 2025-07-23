@@ -11,9 +11,9 @@ const router = useRouter()
 
 // 查看详情方法
 const viewDetails = () => {
-  if (realResult?.value) {
+  if (realResult) {
     // 将结果保存到本地存储
-    localStorage.setItem('latestAnalysisResult', JSON.stringify(realResult.value))
+    localStorage.setItem('latestAnalysisResult', JSON.stringify(realResult))
     // 跳转到详情页面
     router.push('/dashboard/model-analysis/result')
   }
@@ -116,11 +116,11 @@ export default {
                       <div class="attack-result">
                         <div class="metric-item">
                           <span class="metric-label">Clean Accuracy:</span>
-                          <span class="metric-value">{{ (realResult?.message?.clean_acc * 100)?.toFixed(2) }}%</span>
+                          <span class="metric-value">{{ (realResult?.message?.clean_acc && (realResult.message.clean_acc * 100)?.toFixed(2)) || 'N/A' }}%</span>
                         </div>
                         <div class="metric-item">
                           <span class="metric-label">Attack Success Rate:</span>
-                          <span class="metric-value">{{ (realResult?.message?.asr * 100)?.toFixed(2) }}%</span>
+                          <span class="metric-value">{{ (realResult?.message?.asr && (realResult.message.asr * 100)?.toFixed(2)) || 'N/A' }}%</span>
                         </div>
                       </div>
                     </template>
@@ -130,11 +130,11 @@ export default {
                       <div class="attack-result">
                         <div class="metric-item">
                           <span class="metric-label">训练集准确率:</span>
-                          <span class="metric-value">{{ (realResult.message?.clf1 * 100).toFixed(2) }}%</span>
+                          <span class="metric-value">{{ (realResult.message?.clf1 && (realResult.message.clf1 * 100)?.toFixed(2)) || 'N/A' }}%</span>
                         </div>
                         <div class="metric-item">
                           <span class="metric-label">测试集准确率:</span>
-                          <span class="metric-value">{{ (realResult.message?.clf2 * 100).toFixed(2) }}%</span>
+                          <span class="metric-value">{{ (realResult.message?.clf2 && (realResult.message.clf2 * 100)?.toFixed(2)) || 'N/A' }}%</span>
                         </div>
                         <div class="metric-item">
                           <span class="metric-label">Epsilon:</span>

@@ -113,7 +113,7 @@ const analysisOptions = [
     defense: '推荐采用对抗训练、随机化防御、特征压缩等技术增强模型鲁棒性，构建多层防御机制。'
   },
   {
-    label: '数据投毒分析',
+    label: '后门攻击分析',
     value: 'backdoor',
     description: '深入检测模型训练数据中的潜在后门和触发器，评估数据投毒攻击的影响范围和成功率。',
     principle: '分析训练数据分布异常和模型行为特征，识别可能被植入的后门触发模式和攻击目标。',
@@ -193,33 +193,6 @@ const hyperParams = ref([
     currentValue: 7,
     impact: '决定模型训练的充分程度，需要结合验证集性能来确定最优停止点'
   },
-  {
-    name: '攻击强度 (Epsilon)',
-    key: 'epsilon',
-    description: '控制对抗样本的扰动幅度，值越大攻击越强但越容易被检测。在对抗训练中用于生成对抗样本',
-    range: '0.01 - 1.0',
-    defaultValue: 0.3,
-    category: '对抗攻击',
-    impact: '决定对抗攻击的强度和隐蔽性，影响模型鲁棒性评估结果'
-  },
-  {
-    name: '迭代次数 (Iterations)',
-    key: 'iterations',
-    description: '攻击算法的迭代轮数，更多迭代可能产生更有效的攻击样本',
-    range: '10 - 1000',
-    defaultValue: 100,
-    category: '优化参数',
-    impact: '影响攻击算法的收敛程度和攻击效果'
-  },
-  {
-    name: '置信度阈值 (Confidence)',
-    key: 'confidence',
-    description: '成员推断攻击的置信度阈值，用于判断样本是否为训练集成员',
-    range: '0.5 - 0.99',
-    defaultValue: 0.8,
-    category: '推断参数',
-    impact: '影响成员推断攻击的准确率和假阳性率'
-  }
 ])
 
 const handleAnalysisTypeChange = (value: string) => {
@@ -231,8 +204,8 @@ const handleAnalysisTypeChange = (value: string) => {
 }
 
 // 获取参数类别对应的标签颜色
-const getParamCategoryColor = (category: string) => {
-  const colorMap: Record<string, string> = {
+const getParamCategoryColor = (category: string): "error" | "default" | "success" | "warning" | "info" | "primary" => {
+  const colorMap: Record<string, "error" | "default" | "success" | "warning" | "info" | "primary"> = {
     '训练参数': 'primary',
     '隐私参数': 'warning',
     '对抗攻击': 'error',
@@ -430,7 +403,7 @@ onBeforeUnmount(() => {
       </n-card>
 
       <!-- 超参数配置说明 -->
-      <n-card title="攻击超参数配置" class="hyperparams-card">
+      <n-card v-if="advancedConfig.usePrivacy" title="攻击超参数配置" class="hyperparams-card">
         <template #header-extra>
           <n-button text @click="showHyperParams = !showHyperParams">
             <template #icon>
@@ -444,11 +417,29 @@ onBeforeUnmount(() => {
           <template #icon>
             <n-icon><SearchOutline /></n-icon>
           </template>
-          系统会自动搜索最优的攻击参数组合，以下是各类攻击的关键超参数说明
+          <div>
+            <p><strong>🔍 智能超参搜索已启用</strong></p>
+            <p>启用隐私保护后，系统会自动搜索最优的攻击参数组合，提升攻击效果和评估准确性。</p>
+            <p><strong>💡 提示：</strong>超参搜索会根据您的模型特征和数据集自动调优，无需手动配置。</p>
+          </div>
         </n-alert>
 
         <n-collapse-transition :show="showHyperParams">
           <div class="hyperparams-content">
+            <n-alert type="warning" style="margin-bottom: 16px;">
+              <template #icon>
+                <n-icon><WarningOutline /></n-icon>
+              </template>
+              <div>
+                <p><strong>⚠️ 重要说明</strong></p>
+                <ul style="margin: 8px 0; padding-left: 20px;">
+                  <li>以下参数值为系统自动优化结果，实际运行时会动态调整</li>
+                  <li>超参搜索过程可能需要额外时间，但能显著提升攻击成功率</li>
+                  <li>不同攻击类型会使用不同的参数组合策略</li>
+                </ul>
+              </div>
+            </n-alert>
+            
             <n-list>
               <n-list-item v-for="param in hyperParams" :key="param.key">
                 <n-thing>
@@ -479,6 +470,26 @@ onBeforeUnmount(() => {
             </n-list>
           </div>
         </n-collapse-transition>
+      </n-card>
+      
+      <!-- 未启用隐私保护时的提示 -->
+      <n-card v-else title="超参数优化" class="hyperparams-card">
+        <n-alert type="default">
+          <template #icon>
+            <n-icon><SettingsOutline /></n-icon>
+          </template>
+          <div>
+            <p><strong>🔧 超参数自动优化</strong></p>
+            <p>开启<strong>隐私保护</strong>功能后，系统将启用智能超参搜索，自动为您的模型找到最优的攻击参数配置。</p>
+            <p><strong>优势：</strong></p>
+            <ul style="margin: 8px 0; padding-left: 20px;">
+              <li>✅ 自动调优，无需手动配置复杂参数</li>
+              <li>✅ 提升攻击成功率和评估准确性</li>
+              <li>✅ 适配不同模型架构和数据集特征</li>
+              <li>✅ 节省调参时间，专注于安全分析结果</li>
+            </ul>
+          </div>
+        </n-alert>
       </n-card>
 
 <!--       

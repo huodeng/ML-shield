@@ -151,7 +151,7 @@ const clearCompleted = () => {
         <h4>任务队列</h4>
         <n-space>
           <n-button 
-            v-if="taskQueue.tasks.filter(t => t.status === 'completed').length > 0"
+            v-if="taskQueue.tasks.filter((t: any) => t.status === 'completed').length > 0"
             size="small" 
             type="tertiary"
             @click="clearCompleted"
@@ -258,7 +258,7 @@ const clearCompleted = () => {
   <TaskResultModal 
     v-model:show="showResultModal"
     :task="selectedTask"
-    @view-details="() => viewTaskDetails(selectedTask)"
+    @view-details="() => selectedTask && viewTaskDetails(selectedTask)"
   />
 </template>
 

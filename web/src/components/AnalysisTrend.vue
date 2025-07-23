@@ -19,14 +19,14 @@ const formatDate = (dateStr: string) => {
 const chartData = computed(() => {
   const history = analysisStore.analysisHistory
   return {
-    dates: history.map((record) => formatDate(record.date)).reverse(),
-    scores: history.map((record) => record.result.score).reverse(),
-    categories: history[0]?.result.categories.map((cat) => cat.name) || [],
+    dates: history.map((record: any) => formatDate(record.date)).reverse(),
+    scores: history.map((record: any) => record.result.score).reverse(),
+    categories: history[0]?.result.categories.map((cat: any) => cat.name) || [],
     categoryTrends:
-      history[0]?.result.categories.map((cat) => ({
+      history[0]?.result.categories.map((cat: any) => ({
         name: cat.name,
         data: history
-          .map((record) => record.result.categories.find((c) => c.name === cat.name)?.score || 0)
+          .map((record: any) => record.result.categories.find((c: any) => c.name === cat.name)?.score || 0)
           .reverse(),
       })) || [],
   }
@@ -95,7 +95,7 @@ const chartOptions = computed(() => ({
         color: '#007AFF',
       },
     },
-    ...chartData.value.categoryTrends.map((cat) => ({
+    ...chartData.value.categoryTrends.map((cat: any) => ({
       name: cat.name,
       type: 'line',
       data: cat.data,

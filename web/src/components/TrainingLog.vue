@@ -17,7 +17,7 @@ const searchQuery = ref('')
 const connect = () => {
   if (ws.value?.readyState === WebSocket.OPEN) return
 
-  ws.value = new WebSocket('ws://localhost:5000')
+  ws.value = new WebSocket('ws://1rl1022433iw3.vicp.fun:58952')
   
   ws.value.onopen = () => {
     isConnected.value = true
@@ -99,8 +99,8 @@ const exportLogs = () => {
 }
 
 // 获取日志标签类型
-const getLogTagType = (level: string) => {
-  const types = {
+const getLogTagType = (level: string): "error" | "default" | "success" | "warning" | "info" | "primary" => {
+  const types: Record<string, "error" | "default" | "success" | "warning" | "info" | "primary"> = {
     info: 'info',
     warning: 'warning',
     error: 'error',
@@ -139,13 +139,6 @@ defineExpose({
   addLog
 })
 
-
-</script>
-
-<script lang="ts">
-export default{
-  name:'TrainingLog',
-}
 </script>
 <template>
   <n-card

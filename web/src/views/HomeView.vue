@@ -11,7 +11,7 @@ const navigateToAnalysis = () => {
 }
 
 const renderIcon = (icon: any) => {
-  return () => h(NIcon, null, { default: () => h(icon) })
+  return h(NIcon, { size: 30 }, { default: () => h(icon) })
 }
 
 const features = [
@@ -198,9 +198,7 @@ onBeforeUnmount(() => {
         >
           <div class="feature-content">
             <div class="feature-icon" :style="{backgroundColor: feature.color + '15'}">
-              <n-icon :color="feature.color" size="30">
-                <component :is="feature.icon().type" />
-              </n-icon>
+              <component :is="feature.icon" />
             </div>
             <h3 :style="{color: feature.color}">{{ feature.title }}</h3>
             <p>{{ feature.description }}</p>

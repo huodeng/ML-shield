@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import modelService, { ModelInfo, LayerInfo } from '@/api/modelService'
 
 export interface AnalysisRecord {
   id: string
@@ -52,9 +53,39 @@ export const useAnalysisStore = defineStore('analysis', () => {
   // 初始化时加载历史记录
   loadHistory()
 
+  // 获取模型信息
+  const getModelInfo = async (): Promise<ModelInfo> => {
+    return await modelService.getModelInfo()
+  }
+
+  // 获取模型层信息
+  const getModelLayers = async (): Promise<LayerInfo[]> => {
+    return await modelService.getModelLayers()
+  }
+
+  // 获取特征图数据
+  const getFeatureMaps = async (layerId: string): Promise<Float32Array> => {
+    return await modelService.getFeatureMaps(layerId)
+  }
+
+  // 获取权重数据
+  const getWeights = async (layerId: string): Promise<Float32Array> => {
+    return await modelService.getWeights(layerId)
+  }
+
+  // 获取激活数据
+  const getActivations = async (layerId: string): Promise<Float32Array> => {
+    return await modelService.getActivations(layerId)
+  }
+
   return {
     analysisHistory,
     addAnalysisRecord,
     clearHistory,
+    getModelInfo,
+    getModelLayers,
+    getFeatureMaps,
+    getWeights,
+    getActivations
   }
 })

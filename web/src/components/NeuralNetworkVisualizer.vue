@@ -9,20 +9,28 @@ import { Icon } from '@iconify/vue'
 
 const emit = defineEmits(['layer-select'])
 
+// 导入LayerInfo接口
+import { LayerInfo } from '@/api/modelService'
+
+// 定义props
+const props = defineProps({
+  layers: {
+    type: Array as () => LayerInfo[],
+    default: () => []
+  },
+  visualizationConfig: {
+    type: Object,
+    default: () => ({})
+  }
+})
+
 // 定义神经网络层的类型
-interface LayerConfig {
+interface LayerConfig extends LayerInfo {
   type: 'input' | 'conv' | 'pool' | 'fc' | 'output'
-  name: string
-  shape: number[]
-  params?: number
-  kernelSize?: number
-  stride?: number
-  padding?: number
-  activation?: string
 }
 
-// CNN模型配置
-const cnnLayers = ref<LayerConfig[]>([
+// CNN模型配置 - 使用props中的layers或默认配置
+const cnnLayers = ref<LayerConfig[]>(props.layers.length > 0 ? props.layers as LayerConfig[] : [
   { type: 'input', name: '输入层', shape: [32, 32, 3], params: 0 },
   { 
     type: 'conv', 

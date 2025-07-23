@@ -29,7 +29,6 @@ import {
   ArrowForwardOutline,
   BulbOutline,
   TrendingUpOutline,
-  SecurityOutline,
   SearchOutline,
   SettingsOutline
 } from '@vicons/ionicons5'
@@ -96,8 +95,8 @@ const features = [
     description: '生成详细的安全评估报告，提供专业的防护建议',
     icon: ShieldCheckmarkOutline,
     color: '#d03050',
-    path: '#',
-    status: 'coming-soon'
+    path: '/dashboard/model-analysis',
+    status: 'ready'
   }
 ]
 

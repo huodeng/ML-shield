@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, Header, UploadFile, File, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.websockets import WebSocket, WebSocketDisconnect
 from typing import Optional, Dict, Any, List
@@ -15,6 +15,14 @@ from me import MLShield
 from FILEF.filefun import copy_file
 from  tasks import real_result
 from paramsseek import find_optimal_parameters
+# 导入模型信息路由器
+import sys
+import os
+# 添加server目录到Python路径
+server_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, server_dir)
+# 直接导入模块
+from api.model_info import router as model_info_router
 app = FastAPI()
 
 # 配置CORS
@@ -25,6 +33,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 注册模型信息路由器
+app.include_router(model_info_router, prefix="/model", tags=["model"])
 
 # 全局变量存储MLShield实例和结果
 global_data = {
@@ -325,4 +336,4 @@ async def upload_dataset(file: UploadFile = File(...)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("api:app", host="127.0.0.1", port=8080, reload=False)
+    uvicorn.run(app, host="127.0.0.1", port=8080, reload=False)

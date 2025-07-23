@@ -38,6 +38,9 @@ const modelInfo = ref({
   description: '这是一个用于图像分类的CNN模型，包含2个卷积层、2个池化层和2个全连接层。'
 })
 
+// 模型层信息
+const modelLayers = ref<LayerInfo[]>([])
+
 // 当前选中的层信息
 const selectedLayerInfo = ref<LayerInfo | null>(null)
 
@@ -47,9 +50,21 @@ const handleLayerSelect = (layer: any) => {
 }
 
 // 在组件挂载时加载模型信息
-onMounted(() => {
-  // 这里可以从API获取真实的模型信息
-  // 例如：analysisStore.getModelInfo()
+onMounted(async () => {
+  try {
+    // 从API获取真实的模型信息
+    const info = await analysisStore.getModelInfo()
+    modelInfo.value = info
+    
+    // 获取模型层信息
+    const layers = await analysisStore.getModelLayers()
+    if (layers && layers.length > 0) {
+      // 存储层信息，用于传递给NeuralNetworkVisualizer组件
+      modelLayers.value = layers
+    }
+  } catch (error) {
+    console.error('加载模型信息失败:', error)
+  }
 })
 </script>
 
@@ -62,6 +77,7 @@ onMounted(() => {
             <NeuralNetworkVisualizer 
               @layer-select="handleLayerSelect"
               :visualization-config="visualizationConfig"
+              :layers="modelLayers"
             />
           </div>
         </n-tab-pane>
@@ -75,19 +91,19 @@ onMounted(() => {
                 </div>
                 <div class="info-item">
                   <span class="label">总参数量:</span>
-                  <span class="value">{{ modelInfo.totalParams.toLocaleString() }}</span>
+                  <span class="value">{{ modelInfo.totalParams ? modelInfo.totalParams.toLocaleString() : '未知' }}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">准确率:</span>
-                  <span class="value">{{ (modelInfo.accuracy * 100).toFixed(2) }}%</span>
+                  <span class="value">{{ modelInfo.accuracy ? (modelInfo.accuracy * 100).toFixed(2) + '%' : '未知' }}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">输入形状:</span>
-                  <span class="value">{{ modelInfo.inputShape.join(' × ') }}</span>
+                  <span class="value">{{ modelInfo.inputShape && modelInfo.inputShape.length ? modelInfo.inputShape.join(' × ') : '未知' }}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">输出形状:</span>
-                  <span class="value">{{ modelInfo.outputShape.join(' × ') }}</span>
+                  <span class="value">{{ modelInfo.outputShape && modelInfo.outputShape.length ? modelInfo.outputShape.join(' × ') : '未知' }}</span>
                 </div>
               </n-space>
             </n-card>
@@ -104,29 +120,29 @@ onMounted(() => {
                 </div>
                 <div class="info-item">
                   <span class="label">层类型:</span>
-                  <span class="value">{{ selectedLayerInfo.type }}</span>
+                  <span class="value">{{ selectedLayerInfo?.type || '未知' }}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">形状:</span>
-                  <span class="value">{{ selectedLayerInfo.shape.join(' × ') }}</span>
+                  <span class="value">{{ selectedLayerInfo?.shape && selectedLayerInfo.shape.length ? selectedLayerInfo.shape.join(' × ') : '未知' }}</span>
                 </div>
-                <div class="info-item" v-if="selectedLayerInfo.params !== undefined">
+                <div class="info-item" v-if="selectedLayerInfo?.params !== undefined">
                   <span class="label">参数量:</span>
-                  <span class="value">{{ selectedLayerInfo.params.toLocaleString() }}</span>
+                  <span class="value">{{ selectedLayerInfo.params ? selectedLayerInfo.params.toLocaleString() : '0' }}</span>
                 </div>
-                <div class="info-item" v-if="selectedLayerInfo.activation">
+                <div class="info-item" v-if="selectedLayerInfo?.activation">
                   <span class="label">激活函数:</span>
                   <span class="value">{{ selectedLayerInfo.activation }}</span>
                 </div>
-                <div class="info-item" v-if="selectedLayerInfo.kernelSize">
+                <div class="info-item" v-if="selectedLayerInfo?.kernelSize">
                   <span class="label">卷积核大小:</span>
                   <span class="value">{{ selectedLayerInfo.kernelSize }}×{{ selectedLayerInfo.kernelSize }}</span>
                 </div>
-                <div class="info-item" v-if="selectedLayerInfo.stride">
+                <div class="info-item" v-if="selectedLayerInfo?.stride">
                   <span class="label">步长:</span>
                   <span class="value">{{ selectedLayerInfo.stride }}</span>
                 </div>
-                <div class="info-item" v-if="selectedLayerInfo.padding !== undefined">
+                <div class="info-item" v-if="selectedLayerInfo?.padding !== undefined">
                   <span class="label">填充:</span>
                   <span class="value">{{ selectedLayerInfo.padding }}</span>
                 </div>

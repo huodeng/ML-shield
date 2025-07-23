@@ -140,7 +140,7 @@ const securityLevel = computed(() => {
 const formatAttackType = (type: string) => {
   const typeMap: Record<string, string> = {
     'all': '对抗攻击评估',
-    'backdoor': '数据投毒分析',
+    'backdoor': '后门攻击分析',
     'dlg': '模型推断风险',
     'mia': '成员推断风险'
   }
@@ -154,7 +154,170 @@ const goBack = () => {
 
 // 生成报告
 const generateReport = () => {
-  message.info('报告生成功能开发中...')
+  if (!analysisResult.value) {
+    message.error('无分析结果数据，无法生成报告')
+    return
+  }
+
+  const reportContent = generateReportContent()
+  downloadReport(reportContent)
+  message.success('报告已生成并下载')
+}
+
+// 生成报告内容
+const generateReportContent = () => {
+  const result = analysisResult.value!
+  const attackType = result.attack_type || '未知'
+  const usePrivacy = result.use_privacy ? '已启用' : '未启用'
+  const currentDate = new Date().toLocaleDateString('zh-CN')
+  
+  let reportContent = `# 隐私评估报告
+
+生成时间：${currentDate}\n攻击类型：${formatAttackType(attackType)}\n隐私保护：${usePrivacy}\n\n`
+  
+  // 根据攻击类型生成不同的报告内容
+  if (attackType === 'mia') {
+    reportContent += generateMIAReport(result)
+  } else if (attackType === 'dlg') {
+    reportContent += generateDLGReport(result)
+  } else if (attackType === 'backdoor') {
+    reportContent += generateBackdoorReport(result)
+  }
+  
+  // 添加通用的改进建议
+  reportContent += generateImprovementSuggestions()
+  
+  return reportContent
+}
+
+// 生成MIA攻击报告
+const generateMIAReport = (result: AnalysisResultType) => {
+  const trainAcc = result.message?.clf1 ? (result.message.clf1 * 100).toFixed(2) : '未知'
+  const testAcc = result.message?.clf2 ? (result.message.clf2 * 100).toFixed(2) : '未知'
+  const attackAcc = result.message?.acc || result.acc || '未知'
+  const epsilon = result.message?.epsilon === 1e308 ? '∞' : (result.message?.epsilon || '未知')
+  
+  return `## 基于MIA攻击的安全性评估
+
+**定义**：成员推断攻击（Membership Inference Attack，MIA）是一种针对机器学习模型的隐私攻击方法，攻击者试图通过观察模型的输入和输出，推断某个数据样本是否属于模型的训练数据集。
+
+**评估方法**：
+1. **攻击模型构建**：攻击者根据目标模型的输出（例如置信度分布）设计一个分类器，用于判断样本是否属于训练集。
+2. **数据划分**：将目标模型的训练数据和未见数据分别作为 "成员" 和 "非成员" 样本。
+3. **攻击过程**：攻击者通过观察目标模型的输出概率分布，推断样本的成员身份。
+4. **指标计算**：基于攻击分类的准确率，计算模型在不同隐私保护设置下的隐私泄露程度。
+
+**评估结果**：
+
+- **训练集准确率**：${trainAcc}%
+- **测试集准确率**：${testAcc}%
+- **攻击准确率**：${attackAcc}%
+- **隐私预算 (Epsilon)**：${epsilon}
+
+**分析与总结**：
+- **隐私泄露现象**：${result.use_privacy ? '在差分隐私保护下，模型的隐私泄露风险得到有效控制。' : '在无隐私保护的情况下，模型对训练数据的过拟合导致其输出对成员样本和非成员样本存在显著差异。'}
+- **隐私保护效果**：${result.use_privacy ? '差分隐私技术通过在模型输出或训练过程中加入噪声，模糊了训练数据和非训练数据之间的差异，从根本上提高了模型的隐私安全性。' : '建议启用差分隐私保护以降低隐私泄露风险。'}
+
+`
+}
+
+// 生成DLG攻击报告
+const generateDLGReport = (result: AnalysisResultType) => {
+  const mseValues = result.message?.mse_values || []
+  const ssimValues = result.message?.ssim_values || []
+  const avgMSE = mseValues.length > 0 ? (mseValues.reduce((a, b) => a + b, 0) / mseValues.length).toFixed(6) : '未知'
+  const avgSSIM = ssimValues.length > 0 ? (ssimValues.reduce((a, b) => a + b, 0) / ssimValues.length).toFixed(6) : '未知'
+  
+  return `## 基于DLG攻击的安全性评估
+
+**定义**：DLG（Deep Leakage from Gradients）攻击基于模型梯度信息，试图推测训练数据的具体特征或内容。通过分析模型训练过程中的梯度信息，攻击者可以还原训练样本或推断其敏感属性。
+
+**评估方法**：
+1. **梯度信息收集**：模拟攻击者获取目标模型在训练过程中生成的梯度信息。
+2. **数据推断**：利用梯度信息构建攻击模型，推测训练数据的特征或内容。
+3. **误差计算**：比较攻击推测结果与真实数据，计算 MSE 和 SSIM 值，评估模型在面临 DLG 攻击时的隐私泄露程度。
+
+**评估结果**：
+
+- **平均重构误差 (MSE)**：${avgMSE}
+- **平均结构相似性 (SSIM)**：${avgSSIM}
+- **重构图像数量**：${mseValues.length}
+- **MSE 值范围**：${mseValues.length > 0 ? `${Math.min(...mseValues).toFixed(6)} - ${Math.max(...mseValues).toFixed(6)}` : '无数据'}
+- **SSIM 值范围**：${ssimValues.length > 0 ? `${Math.min(...ssimValues).toFixed(6)} - ${Math.max(...ssimValues).toFixed(6)}` : '无数据'}
+
+**分析与总结**：
+- **隐私泄露现象**：${result.use_privacy ? '在差分隐私保护下，梯度中的敏感信息得到有效保护，攻击者难以准确重构原始数据。' : 'MSE值较低表明攻击者能够利用梯度信息较为准确地还原训练数据特征，存在隐私泄露风险。'}
+- **隐私保护效果**：${result.use_privacy ? '差分隐私技术在梯度计算过程中引入噪声，通过模糊化敏感信息，有效增强了隐私保护效果。' : '建议启用差分隐私保护以提高梯度信息的安全性。'}
+
+`
+}
+
+// 生成后门攻击报告
+const generateBackdoorReport = (result: AnalysisResultType) => {
+  const cleanAcc = result.message?.clean_acc ? (result.message.clean_acc * 100).toFixed(2) : '未知'
+  const asr = result.message?.asr ? (result.message.asr * 100).toFixed(5) : '未知'
+  
+  return `## 基于后门攻击的安全性评估
+
+**定义**：后门攻击是一种针对机器学习模型的恶意攻击方式，攻击者在训练数据中植入特定的触发器模式，使得模型在遇到包含触发器的输入时产生预定的错误输出。
+
+**评估方法**：
+1. **触发器设计**：设计特定的触发器模式并植入到部分训练样本中。
+2. **模型训练**：使用包含后门样本的数据集训练模型。
+3. **攻击测试**：测试模型在正常样本和包含触发器样本上的表现。
+4. **指标计算**：计算干净准确率和攻击成功率，评估后门攻击的有效性。
+
+**评估结果**：
+
+- **干净准确率 (Clean Accuracy)**：${cleanAcc}%
+- **攻击成功率 (Attack Success Rate)**：${asr}%
+
+**分析与总结**：
+- **模型性能**：干净准确率为 ${cleanAcc}%，表明模型在正常样本上${parseFloat(cleanAcc) > 90 ? '表现良好' : '表现一般'}。
+- **后门风险**：攻击成功率为 ${asr}%，${parseFloat(asr) > 80 ? '表明模型存在较高的后门攻击风险' : '表明模型对后门攻击具有一定的抵抗能力'}。
+- **安全建议**：${result.use_privacy ? '当前已启用隐私保护措施，建议继续加强数据质量控制和异常检测。' : '建议启用隐私保护措施并加强训练数据的安全性验证。'}
+
+`
+}
+
+// 生成改进建议
+const generateImprovementSuggestions = () => {
+  return `## 改进建议
+
+1. **提升隐私保护技术的精度与效率**：
+   - 在差分隐私的实现中，优化噪声注入机制，选择适合的噪声强度和分布，兼顾隐私保护与模型性能。
+   - 使用动态噪声注入方法，根据训练过程中的隐私风险实时调整噪声水平，以提高隐私保护的灵活性和效率。
+   - 结合梯度裁剪和差分隐私技术，形成多层次隐私保护机制，有效抑制数据泄露风险。
+
+2. **增强模型的泛化能力**：
+   - 通过数据增强技术，扩大训练数据的多样性，提高模型在未见数据上的预测能力。
+   - 引入更强的正则化手段（如权重衰减或对抗正则化），减少模型过拟合，降低隐私泄露风险。
+
+3. **采用隐私风险评估的多样化指标**：
+   - 在传统指标的基础上，引入新的隐私评估方法（如信息熵或混合攻击评估），对隐私泄露进行更全面的评估。
+   - 分析不同数据集和任务场景中的隐私保护效果，优化针对性策略。
+
+4. **改进攻击模拟与防御评估**：
+   - 构建更复杂和真实的攻击模拟框架，包括联合多种攻击方法，验证模型的综合抗攻击能力。
+   - 定期评估隐私保护技术的有效性，动态更新保护策略，保持领先的隐私保护水平。
+
+## 总结
+
+本报告基于实际的模型分析结果，全面评估了模型在隐私保护方面的表现。通过科学的评估方法和详细的数据分析，为模型的隐私安全提供了重要的参考依据。建议根据评估结果，采取相应的隐私保护措施，确保模型在实际应用中的安全性和可靠性。
+`
+}
+
+// 下载报告
+const downloadReport = (content: string) => {
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `隐私评估报告_${new Date().toISOString().slice(0, 10)}.md`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
 // 分享结果
@@ -232,13 +395,13 @@ onMounted(() => {
               <n-statistic label="攻击类型" :value="formatAttackType(analysisResult.attack_type || '')" />
             </n-grid-item>
 
-            <n-grid-item>
+            <!-- <n-grid-item>
               <n-statistic label="安全等级">
                 <template #suffix>
                   <n-tag :type="securityLevel.color">{{ securityLevel.level }}</n-tag>
                 </template>
               </n-statistic>
-            </n-grid-item>
+            </n-grid-item> -->
             <n-grid-item>
               <n-statistic label="隐私保护" :value="analysisResult.use_privacy ? '已启用' : '未启用'" />
             </n-grid-item>
@@ -274,7 +437,7 @@ onMounted(() => {
                       {{ (analysisResult.message.clean_acc * 100).toFixed(2) }}%
                     </n-descriptions-item>
                     <n-descriptions-item label="攻击成功率" v-if="analysisResult.message?.asr">
-                      {{ (analysisResult.message.asr * 100).toFixed(2) }}%
+                      {{ (analysisResult.message.asr * 100).toFixed(5) }}%
                     </n-descriptions-item>
                   </template>
                   
@@ -286,11 +449,11 @@ onMounted(() => {
                     <n-descriptions-item label="测试集准确率" v-if="analysisResult.message?.clf2">
                       {{ (analysisResult.message.clf2 * 100).toFixed(2) }}%
                     </n-descriptions-item>
-                    <n-descriptions-item label="攻击强度 (Epsilon)" v-if="analysisResult.message?.epsilon">
+                    <n-descriptions-item label="隐私预算 (Epsilon)" v-if="analysisResult.message?.epsilon">
                       {{ analysisResult.message.epsilon === 1e308 ? '∞' : analysisResult.message.epsilon }}
                     </n-descriptions-item>
                     <n-descriptions-item label="推断准确率" v-if="analysisResult.message?.acc">
-                      {{ (Number(analysisResult.message.acc) * 100).toFixed(2) }}%
+                      {{ (Number(analysisResult.message.acc) * 100).toFixed(4) }}%
                     </n-descriptions-item>
                   </template>
                   
