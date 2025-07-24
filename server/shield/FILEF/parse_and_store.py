@@ -14,23 +14,12 @@ def main():
         print(f"错误: 模型文件 {model_file_path} 不存在")
         return False
     
-    # 数据库配置
-    host_input = input("请输入MySQL主机地址 [localhost]: ") or "localhost"
-    # 处理包含端口号的情况
-    if ':' in host_input:
-        host_parts = host_input.split(':')
-        host = host_parts[0]
-        port = int(host_parts[1]) if len(host_parts) > 1 else 3306
-    else:
-        host = host_input
-        port = 3306
-    
     db_config = {
-        'host': host,
-        'port': port,
-        'user': input("请输入MySQL用户名 [root]: ") or "root",
-        'password': input("请输入MySQL密码: "),
-        'database': input("请输入数据库名称 [ml_shield]: ") or "ml_shield"
+        'host': 'localhost',
+        'port': 3306,
+        'user': 'root',
+        'password': '666666',
+        'database': 'mysql'
     }
     
     # 检查数据库是否存在，如果不存在则创建

@@ -363,7 +363,7 @@ const getActivityIcon = (type: string) => {
     <div class="guide-section" :class="{ 'animate-in': showGuide }">
       <n-card title="使用指南" class="guide-card">
         <template #header-extra>
-          <a href="https://huodeng.github.io/shield-ml/" target="_blank" class="guide-link">
+          <a href="http://huodeng.github.io/ML-shield/" target="_blank" class="guide-link">
             <n-icon size="20" class="guide-icon"><BookOutline /></n-icon>
           </a>
         </template>

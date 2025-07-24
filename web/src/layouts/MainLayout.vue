@@ -61,7 +61,7 @@ function renderIcon(icon: Component) {
 }
 
 function openGuide() {
-  window.open('https://huodeng.github.io/shield-ml/', '_blank')
+  window.open('http://huodeng.github.io/ML-shield/', '_blank')
 }
 </script>
 
